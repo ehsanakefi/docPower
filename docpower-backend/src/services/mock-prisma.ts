@@ -40,6 +40,15 @@ export interface Chunk {
   createdAt?: Date;
 }
 
+export interface User {
+  id: number;
+  username: string;
+  password: string;
+  role: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // In-memory mock data store
 let documents: Document[] = [
   {
@@ -141,6 +150,17 @@ let documentSections: DocumentSection[] = [
 ];
 
 let chunks: Chunk[] = [];
+
+let users: User[] = [
+  {
+    id: 1,
+    username: 'admin',
+    password: '$2b$10$X7EXAMPLE', // This would be a hashed password
+    role: 'admin',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+];
 
 // Mock Prisma Client
 export class MockPrismaClient {
@@ -403,6 +423,49 @@ export class MockPrismaClient {
   async $connect() {
     console.log('Mock Prisma Client connected');
   }
+
+  user = {
+    create: async (data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const newUser: User = {
+        id: users.length + 1,
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      users.push(newUser);
+      return newUser;
+    },
+
+    findByUsername: async (username: string) => {
+      return users.find(u => u.username === username) || null;
+    },
+
+    findById: async (id: number) => {
+      return users.find(u => u.id === id) || null;
+    },
+
+    findMany: async () => {
+      return users;
+    },
+
+    update: async (id: number, data: Partial<User>) => {
+      const index = users.findIndex(u => u.id === id);
+      if (index === -1) throw new Error('User not found');
+      
+      users[index] = {
+        ...users[index],
+        ...data,
+        updatedAt: new Date()
+      };
+      return users[index];
+    },
+
+    delete: async (id: number) => {
+      const index = users.findIndex(u => u.id === id);
+      if (index === -1) throw new Error('User not found');
+      return users.splice(index, 1)[0];
+    }
+  };
 }
 
 export const PrismaClient = MockPrismaClient;

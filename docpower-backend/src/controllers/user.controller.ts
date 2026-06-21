@@ -17,7 +17,7 @@ export const getUsers = async (req: Request, res: Response) => {
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const user = await userService.getUserById(id);
+    const user = await userService.getUserById(String(id));
     
     if (!user) {
       return res.status(404).json({ 
@@ -70,7 +70,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
       });
     }
     
-    const user = await userService.updateUserRole(id, role);
+    const user = await userService.updateUserRole(String(id), role);
     res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ 
@@ -84,7 +84,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
 export const toggleUserStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const user = await userService.toggleUserStatus(id);
+    const user = await userService.toggleUserStatus(String(id));
     res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ 

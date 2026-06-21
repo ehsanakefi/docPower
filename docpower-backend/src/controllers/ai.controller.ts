@@ -26,7 +26,7 @@ export const sendMessage = async (req: Request, res: Response) => {
 export const getConversationHistory = async (req: Request, res: Response) => {
   try {
     const { conversationId } = req.params;
-    const history = await aiService.getConversationHistory(conversationId);
+    const history = await aiService.getConversationHistory(String(conversationId));
     res.json({ success: true, data: history });
   } catch (error) {
     res.status(500).json({ 

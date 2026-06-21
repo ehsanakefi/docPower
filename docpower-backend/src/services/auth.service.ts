@@ -1,22 +1,22 @@
-import { User } from '../models/User';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
+import { prisma } from '../database/connection';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
 export const registerUser = async (username: string, password: string) => {
   const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = await User.create({
-    data: {
-      username,
-      password: hashedPassword,
-    },
+  const newUser = await prisma.user.create({
+    username,
+    password: hashedPassword,
+    role: 'user'
   });
   return newUser;
 };
 
 export const loginUser = async (username: string, password: string) => {
-  const user = await User.findUnique({ where: { username } });
+  const user = await prisma.user.findByUsername(username);
   if (!user) {
     throw new Error('User not found');
   }
@@ -30,13 +30,13 @@ export const loginUser = async (username: string, password: string) => {
   return { user, token };
 };
 
-export const authenticateToken = (req, res, next) => {
+export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers['authorization']?.split(' ')[1];
   if (!token) return res.sendStatus(401);
   
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) return res.sendStatus(403);
-    req.user = user;
+    (req as any).user = user;
     next();
   });
 };
