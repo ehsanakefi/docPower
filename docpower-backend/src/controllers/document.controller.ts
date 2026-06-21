@@ -1,7 +1,31 @@
 import { Request, Response } from 'express';
 import { DocumentService, CreateDocumentData } from '../services/document.service';
+import { DocumentIngestionService } from '../services/documentIngestion.service';
+import { extractTextFromDocx } from '../utils/docxExtractor';
+import multer, { FileFilterCallback } from 'multer';
 
 const documentService = new DocumentService();
+const ingestionService = new DocumentIngestionService();
+
+// Configure multer for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+  fileFilter: (req: Express.Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+    if (
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.originalname.endsWith('.docx')
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .docx files are allowed'));
+    }
+  },
+});
+
+export const uploadMiddleware = upload.single('file');
 
 export const addDocument = async (req: Request, res: Response) => {
   try {
@@ -131,6 +155,89 @@ export const updateDocument = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * Upload and process a .docx document with full ingestion pipeline.
+ * 
+ * POST /api/documents/upload
+ * Content-Type: multipart/form-data
+ * 
+ * Fields:
+ *  - file: .docx file
+ *  - title: document title
+ *  - doc_code: document code
+ *  - issue_date: Jalali date
+ */
+export const uploadDocument = async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+    const { title, doc_code, issue_date } = req.body;
+
+    // Validate file
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    // Validate required fields
+    if (!title || !doc_code || !issue_date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, doc_code, issue_date',
+      });
+    }
+
+    // Step 1: Extract text from .docx
+    const rawText = await extractTextFromDocx(file.buffer);
+
+    if (!rawText || rawText.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No text content found in document',
+      });
+    }
+
+    // Step 2: Create document record
+    const document = await documentService.addDocument({
+      title,
+      doc_code,
+      issue_date,
+      file_url: `/uploads/${file.originalname}`,
+    });
+
+    if (!document) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create document record',
+      });
+    }
+
+    // Step 3: Run ingestion pipeline (normalize, chunk, store)
+    const ingestionResult = await ingestionService.ingestDocument({
+      documentId: document.id,
+      fileName: file.originalname,
+      rawText,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Document uploaded and processed successfully',
+      data: {
+        document,
+        ingestion: ingestionResult,
+      },
+    });
+  } catch (error) {
+    console.error('Upload document error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error uploading document',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
 export const deleteDocument = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -141,6 +248,9 @@ export const deleteDocument = async (req: Request, res: Response) => {
         message: 'Invalid document ID'
       });
     }
+    
+    // Delete associated chunks
+    await ingestionService.deleteDocumentChunks(id);
     
     await documentService.deleteDocument(id);
     

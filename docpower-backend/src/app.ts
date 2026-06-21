@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import documentRoutes from './routes/document.routes';
 import searchRoutes from './routes/search.routes';
+import unifiedSearchRoutes from './routes/unifiedSearch.routes';
 import { connectToDatabase } from './database/connection';
 
 // Load environment variables
@@ -24,7 +25,8 @@ connectToDatabase();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
-app.use('/api/documents/search', searchRoutes);  // Search endpoint
+app.use('/api/documents/search', searchRoutes);  // Legacy search endpoint
+app.use('/api/search', unifiedSearchRoutes);     // New unified search endpoint
 app.use('/api/admin/documents', documentRoutes);  // Admin endpoint for adding documents
 
 // Health check endpoint

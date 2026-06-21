@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { addDocument, getDocuments, getDocumentById, updateDocument, deleteDocument } from '../controllers/document.controller';
+import { addDocument, getDocuments, getDocumentById, updateDocument, deleteDocument, uploadDocument, uploadMiddleware } from '../controllers/document.controller';
 
 const router = Router();
 
 // Admin routes for document management
 router.post('/', addDocument);       // POST /api/admin/documents
+router.post('/upload', uploadMiddleware, uploadDocument); // POST /api/documents/upload
 router.get('/', getDocuments);       // GET /api/documents
 router.get('/:id', getDocumentById); // GET /api/documents/:id
 router.put('/:id', updateDocument);  // PUT /api/documents/:id

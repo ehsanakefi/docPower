@@ -22,6 +22,24 @@ export interface DocumentSection {
   updated_at?: Date;
 }
 
+export interface Chunk {
+  id: string;
+  documentId: string;
+  chunkIndex: number;
+  type: 'paragraph' | 'retrieval' | 'rag';
+  text: string;
+  normalizedText: string;
+  paragraphStart: number;
+  paragraphEnd: number;
+  charLength: number;
+  metadata: {
+    fileName: string;
+    uploadDate: string;
+  };
+  embedding?: number[];
+  createdAt?: Date;
+}
+
 // In-memory mock data store
 let documents: Document[] = [
   {
@@ -121,6 +139,8 @@ let documentSections: DocumentSection[] = [
     updated_at: new Date()
   }
 ];
+
+let chunks: Chunk[] = [];
 
 // Mock Prisma Client
 export class MockPrismaClient {
@@ -328,6 +348,56 @@ export class MockPrismaClient {
       documentSections = documentSections.filter(section => section.document_id !== where.document_id);
       return { count: initialLength - documentSections.length };
     }
+  };
+
+  chunk = {
+    create: async ({ data }: { data: Omit<Chunk, 'id' | 'createdAt'> }) => {
+      const newChunk: Chunk = {
+        id: `chunk-${chunks.length + 1}`,
+        ...data,
+        createdAt: new Date(),
+      };
+      chunks.push(newChunk);
+      return newChunk;
+    },
+
+    createMany: async ({ data }: { data: Omit<Chunk, 'id' | 'createdAt'>[] }) => {
+      const newChunks = data.map((chunkData, index) => ({
+        id: `chunk-${chunks.length + index + 1}`,
+        ...chunkData,
+        createdAt: new Date(),
+      }));
+      
+      chunks.push(...newChunks);
+      return { count: newChunks.length };
+    },
+
+    findMany: async ({ where = {} }: any = {}) => {
+      let results = [...chunks];
+      
+      if (where.documentId) {
+        results = results.filter(chunk => chunk.documentId === where.documentId);
+      }
+      
+      if (where.type) {
+        results = results.filter(chunk => chunk.type === where.type);
+      }
+
+      if (where.normalizedText?.contains) {
+        const searchTerm = where.normalizedText.contains.toLowerCase();
+        results = results.filter(chunk => 
+          chunk.normalizedText.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      return results;
+    },
+
+    deleteMany: async ({ where }: { where: { documentId: string } }) => {
+      const initialLength = chunks.length;
+      chunks = chunks.filter(chunk => chunk.documentId !== where.documentId);
+      return { count: initialLength - chunks.length };
+    },
   };
 
   async $connect() {
