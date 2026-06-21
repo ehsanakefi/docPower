@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String  @id @default(uuid())
+  username  String  @unique
+  password  String
+  role      String
+
+  @@map("users")
+}
+
+model Document {
+  id          String   @id @default(uuid())
+  title       String
+  doc_code    String   @unique
+  issue_date  String   // Jalali date as string, e.g., '1400/01/28'
+  file_url    String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  
+  // Relations
+  sections    DocumentSection[]
+
+  @@map("documents")
+}
+
+model DocumentSection {
+  id          String   @id @default(uuid())
+  document_id String
+  title       String   // Section title (e.g., 'Article 1', 'Table 12', 'Appendix A')
+  section_type String? // Optional: 'article', 'table', 'appendix', etc.
+  order_index Int?    // Optional: for ordering sections
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  
+  // Relations
+  document    Document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  
+  @@map("document_sections")
+  @@index([document_id])
+}
