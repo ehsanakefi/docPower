@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { Activity, AlertCircle, CheckCircle, Info, XCircle } from "lucide-react";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { ScrollArea } from "../components/ui/scroll-area";
+import { toast } from "sonner";
+import api from "../services/api";
 
 type LogType = "info" | "success" | "warning" | "error";
 
@@ -15,87 +18,46 @@ type LogEntry = {
 };
 
 export function SystemLogs() {
-  const logs: LogEntry[] = [
-    {
-      id: 1,
-      type: "success",
-      message: "سند جدید با موفقیت بارگذاری شد",
-      user: "احمد محمدی",
-      timestamp: "1403/11/19 - 14:32",
-      details: "کد سند: TAV112-02/00",
-    },
-    {
-      id: 2,
-      type: "info",
-      message: "کاربر جدید به سیستم اضافه شد",
-      user: "مدیر سیستم",
-      timestamp: "1403/11/19 - 13:15",
-      details: "نام کاربری: m.rezaei",
-    },
-    {
-      id: 3,
-      type: "warning",
-      message: "تلاش ناموفق برای دسترسی به سند محرمانه",
-      user: "علی کریمی",
-      timestamp: "1403/11/19 - 12:45",
-      details: "کد سند: TAV125-06/01",
-    },
-    {
-      id: 4,
-      type: "success",
-      message: "بک‌آپ خودکار با موفقیت انجام شد",
-      user: "سیستم",
-      timestamp: "1403/11/19 - 02:00",
-      details: "حجم: 2.3 GB",
-    },
-    {
-      id: 5,
-      type: "error",
-      message: "خطا در پردازش OCR",
-      user: "سیستم",
-      timestamp: "1403/11/18 - 16:22",
-      details: "فایل: document_scan_054.pdf",
-    },
-    {
-      id: 6,
-      type: "info",
-      message: "سند ویرایش شد",
-      user: "سارا احمدی",
-      timestamp: "1403/11/18 - 15:10",
-      details: "کد سند: TAV118-08/02",
-    },
-    {
-      id: 7,
-      type: "success",
-      message: "Embeddings جدید تولید شد",
-      user: "سیستم",
-      timestamp: "1403/11/18 - 14:55",
-      details: "تعداد: 15 سند",
-    },
-    {
-      id: 8,
-      type: "warning",
-      message: "فضای ذخیره‌سازی به 80% رسید",
-      user: "سیستم",
-      timestamp: "1403/11/18 - 10:30",
-      details: "باقیمانده: 200 GB",
-    },
-    {
-      id: 9,
-      type: "info",
-      message: "کاربر از سیستم خارج شد",
-      user: "مهدی رضایی",
-      timestamp: "1403/11/18 - 09:15",
-    },
-    {
-      id: 10,
-      type: "success",
-      message: "سند منتشر شد",
-      user: "احمد محمدی",
-      timestamp: "1403/11/17 - 16:40",
-      details: "کد سند: TAV120-03/00",
-    },
-  ];
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    todayEvents: 0,
+    warnings: 0,
+    errors: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLogs();
+    fetchStats();
+  }, []);
+
+  const fetchLogs = async () => {
+    try {
+      const response = await api.getLogs();
+      if (response.success && response.data) {
+        setLogs(response.data);
+      } else {
+        toast.error('خطا در بارگذاری گزارش‌ها');
+      }
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      toast.error('خطا در بارگذاری گزارش‌ها');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.getLogStats();
+      if (response.success && response.data) {
+        setStats(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching log stats:', error);
+    }
+  };
 
   const getLogIcon = (type: LogType) => {
     switch (type) {
@@ -139,11 +101,11 @@ export function SystemLogs() {
     }
   };
 
-  const stats = [
-    { label: "کل رویدادها", value: "1,234", color: "bg-blue-500" },
-    { label: "رویدادهای امروز", value: "45", color: "bg-emerald-500" },
-    { label: "هشدارها", value: "12", color: "bg-amber-500" },
-    { label: "خطاها", value: "3", color: "bg-red-500" },
+  const statsDisplay = [
+    { label: "کل رویدادها", value: stats.totalEvents.toLocaleString('fa-IR'), color: "bg-blue-500" },
+    { label: "رویدادهای امروز", value: stats.todayEvents.toLocaleString('fa-IR'), color: "bg-emerald-500" },
+    { label: "هشدارها", value: stats.warnings.toLocaleString('fa-IR'), color: "bg-amber-500" },
+    { label: "خطاها", value: stats.errors.toLocaleString('fa-IR'), color: "bg-red-500" },
   ];
 
   return (
@@ -159,7 +121,7 @@ export function SystemLogs() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        {stats.map((stat) => (
+        {statsDisplay.map((stat) => (
           <Card
             key={stat.label}
             className="p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
@@ -190,7 +152,23 @@ export function SystemLogs() {
         </div>
         <ScrollArea className="h-[600px]">
           <div className="p-6 space-y-4">
-            {logs.map((log) => (
+            {loading && (
+              <div className="text-center py-12">
+                <p className="text-slate-600 dark:text-slate-400">
+                  در حال بارگذاری...
+                </p>
+              </div>
+            )}
+
+            {!loading && logs.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-slate-600 dark:text-slate-400">
+                  هیچ گزارشی یافت نشد
+                </p>
+              </div>
+            )}
+
+            {!loading && logs.map((log) => (
               <div
                 key={log.id}
                 className="flex gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"

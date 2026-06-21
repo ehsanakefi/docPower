@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '../services/api';
 
 export type UserRole = 'admin' | 'user';
 
@@ -20,24 +21,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data - in a real app, this would come from your API
-const mockUsers = [
-  {
-    id: '1',
-    username: 'admin',
-    password: 'admin123',
-    email: 'admin@example.com',
-    role: 'admin' as UserRole,
-  },
-  {
-    id: '2',
-    username: 'user',
-    password: 'user123',
-    email: 'user@example.com',
-    role: 'user' as UserRole,
-  },
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,8 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check for existing session on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
+    }
+    if (token) {
+      api.setToken(token);
     }
     setIsLoading(false);
   }, []);
@@ -55,25 +42,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
-    // Mock API call - replace with real authentication
-    const foundUser = mockUsers.find(
-      u => u.username === username && u.password === password
-    );
-
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+    try {
+      const response = await api.login(username, password);
       
-      // Redirect based on role
-      if (foundUser.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/user');
+      if (response.success && response.data?.user) {
+        const userData = response.data.user;
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Redirect based on role
+        if (userData.role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/user');
+        }
+        
+        setIsLoading(false);
+        return true;
       }
-      
-      setIsLoading(false);
-      return true;
+    } catch (error) {
+      console.error('Login error:', error);
     }
     
     setIsLoading(false);
@@ -83,6 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    api.logout();
     router.push('/login');
   };
 

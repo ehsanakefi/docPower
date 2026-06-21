@@ -6,6 +6,11 @@ import authRoutes from './routes/auth.routes';
 import documentRoutes from './routes/document.routes';
 import searchRoutes from './routes/search.routes';
 import unifiedSearchRoutes from './routes/unifiedSearch.routes';
+import userRoutes from './routes/user.routes';
+import logsRoutes from './routes/logs.routes';
+import notificationsRoutes from './routes/notifications.routes';
+import aiRoutes from './routes/ai.routes';
+import filterRoutes from './routes/filter.routes';
 import { connectToDatabase } from './database/connection';
 
 // Load environment variables
@@ -28,6 +33,11 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/documents/search', searchRoutes);  // Legacy search endpoint
 app.use('/api/search', unifiedSearchRoutes);     // New unified search endpoint
 app.use('/api/admin/documents', documentRoutes);  // Admin endpoint for adding documents
+app.use('/api/users', userRoutes);               // User management endpoints
+app.use('/api/logs', logsRoutes);                // System logs endpoints
+app.use('/api/notifications', notificationsRoutes); // Notifications endpoints
+app.use('/api/ai', aiRoutes);                    // AI assistant endpoints
+app.use('/api/filter', filterRoutes);            // Filter endpoints
 
 // Health check endpoint
 app.get('/health', (req, res) => {

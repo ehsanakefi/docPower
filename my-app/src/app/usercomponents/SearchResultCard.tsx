@@ -1,9 +1,17 @@
 "use client";
-import { FileText, Calendar, Building2, Layers } from 'lucide-react';
+import { FileText, Calendar } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
-import { Document } from '../data/mockData';
 import { useRouter } from 'next/navigation';
+
+interface Document {
+  id: string;
+  title: string;
+  doc_code: string;
+  issue_date: string;
+  file_url: string;
+  sections?: any[];
+}
 
 interface SearchResultCardProps {
   document: Document;
@@ -20,70 +28,31 @@ export function SearchResultCard({ document }: SearchResultCardProps) {
       <CardContent className="p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
-          <Badge
-            variant={document.status === 'active' ? 'default' : 'secondary'}
-            className={
-              document.status === 'active'
-                ? 'bg-[#10B981] hover:bg-[#059669]'
-                : 'bg-slate-400'
-            }
-          >
-            {document.status === 'active' ? 'فعال' : 'منسوخ'}
+          <Badge variant="default" className="bg-[#10B981] hover:bg-[#059669]">
+            فعال
           </Badge>
           <div className="text-right flex-1 mr-3">
-            <p className="text-sm text-slate-500 mb-1">{document.code}</p>
+            <p className="text-sm text-slate-500 mb-1">{document.doc_code}</p>
             <h3 className="font-semibold text-lg dark:text-white mb-1">
-              {document.titlePersian}
-            </h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
               {document.title}
-            </p>
+            </h3>
           </div>
         </div>
-
-        {/* Snippet */}
-        <p className="text-sm text-slate-600 dark:text-slate-300 text-right mb-4 line-clamp-2">
-          {document.snippetPersian}
-        </p>
 
         {/* Metadata */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center justify-end gap-2">
             <span className="text-sm text-slate-600 dark:text-slate-400">
-              {document.articleCount} ماده
+              {document.sections?.length || 0} بخش
             </span>
             <FileText className="w-4 h-4 text-slate-400" />
           </div>
           <div className="flex items-center justify-end gap-2">
             <span className="text-sm text-slate-600 dark:text-slate-400">
-              {document.approvalDate}
+              {document.issue_date}
             </span>
             <Calendar className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="flex items-center justify-end gap-2">
-            <span className="text-sm text-slate-600 dark:text-slate-400 truncate">
-              {document.issuingBodyPersian}
-            </span>
-            <Building2 className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <span className="text-sm text-slate-600 dark:text-slate-400">
-              {document.technicalDomainPersian}
-            </span>
-            <Layers className="w-4 h-4 text-slate-400" />
-          </div>
-        </div>
-
-        {/* Keywords */}
-        <div className="mt-4 flex flex-wrap gap-2 justify-end">
-          {document.keywords.map((keyword, idx) => (
-            <span
-              key={idx}
-              className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded"
-            >
-              {keyword}
-            </span>
-          ))}
         </div>
       </CardContent>
     </Card>

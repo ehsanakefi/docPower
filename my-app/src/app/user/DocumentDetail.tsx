@@ -1,29 +1,67 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import api from '../services/api';
 import {
   ArrowRight,
   FileText,
   Download,
   Share2,
-  Sparkles,
   Moon,
   Sun,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { DataTable } from '../usercomponents/DataTable';
-import { FormulaView } from '../usercomponents/FormulaView';
-import { mockDocuments, mockGISAssets, mockClimateParameters } from '../data/mockData';
+import { toast } from 'sonner';
+
+interface Document {
+  id: string;
+  title: string;
+  doc_code: string;
+  issue_date: string;
+  file_url: string;
+  sections?: any[];
+}
 
 export function DocumentDetail() {
   const params = useParams();
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
+  const [document, setDocument] = useState<Document | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const document = mockDocuments.find((doc) => doc.id === params?.id);
+  useEffect(() => {
+    if (params?.id) {
+      loadDocument(params.id as string);
+    }
+  }, [params?.id]);
+
+  const loadDocument = async (id: string) => {
+    setLoading(true);
+    try {
+      const response = await api.getDocumentById(id);
+      if (response.success && response.data) {
+        setDocument(response.data);
+      } else {
+        toast.error('خطا در بارگذاری سند');
+      }
+    } catch (error) {
+      toast.error('خطا در ارتباط با سرور');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-slate-500">در حال بارگذاری...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!document) {
     return (
@@ -46,24 +84,6 @@ export function DocumentDetail() {
       </div>
     );
   }
-
-  // Mock data for tables
-  const climateData = mockClimateParameters;
-  const gisData = mockGISAssets;
-
-  const climateColumns = [
-    { key: 'parameter', label: 'پارامتر' },
-    { key: 'value', label: 'مقدار' },
-    { key: 'unit', label: 'واحد' },
-    { key: 'source', label: 'منبع' },
-  ];
-
-  const gisColumns = [
-    { key: 'layer', label: 'لایه' },
-    { key: 'type', label: 'نوع' },
-    { key: 'accuracy', label: 'دقت' },
-    { key: 'lastUpdated', label: 'آخرین بروزرسانی' },
-  ];
 
   return (
     <div className={`min-h-screen transition-colors ${darkMode ? 'dark bg-slate-900' : 'bg-slate-50'}`}>
@@ -99,17 +119,15 @@ export function DocumentDetail() {
 
         {/* Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-          {/* Left Panel - Document Info & Tables */}
+          {/* Left Panel - Document Info */}
           <div className="space-y-6">
             {/* Document Info */}
             <Card>
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <Badge variant="secondary" className="mb-2">
-                    {document.issuingBody}
-                  </Badge>
+                  <Badge variant="secondary" className="mb-2">سند</Badge>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => window.open(document.file_url, '_blank')}>
                       <Download className="w-4 h-4 ml-2" />
                       دانلود
                     </Button>
@@ -119,54 +137,51 @@ export function DocumentDetail() {
                     </Button>
                   </div>
                 </div>
-                <CardTitle className="text-right">{document.titlePersian}</CardTitle>
+                <CardTitle className="text-right">{document.title}</CardTitle>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {document.code} • {document.approvalDate}
+                  {document.doc_code} • {document.issue_date}
                 </p>
               </CardHeader>
               <CardContent>
-                <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {document.snippetPersian}
-                </p>
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">تعداد بخش‌ها: {document.sections?.length || 0}</p>
+                  {document.sections && document.sections.length > 0 && (
+                    <div className="space-y-1 mt-4">
+                      <h4 className="font-semibold text-sm text-slate-700 dark:text-slate-300 mb-2">بخش‌های سند:</h4>
+                      {document.sections.map((section: any, index: number) => (
+                        <p key={index} className="text-sm text-slate-700 dark:text-slate-300 py-1">
+                          {index + 1}. {section.title}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
-            {/* Interactive Tables */}
+            {/* Document Details */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-emerald-500" />
-                  داده‌های تعاملی
+                  <FileText className="w-5 h-5 text-emerald-500" />
+                  جزئیات سند
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="climate" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="climate">پارامترهای اقلیمی</TabsTrigger>
-                    <TabsTrigger value="gis">داده‌های GIS</TabsTrigger>
-                    <TabsTrigger value="formulas">فرمول‌ها</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="climate" className="mt-4">
-                    <DataTable
-                      data={climateData}
-                      columns={climateColumns}
-                      type="climate"
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="formulas" className="mt-4">
-                    <FormulaView />
-                  </TabsContent>
-
-                  <TabsContent value="gis" className="mt-4">
-                    <DataTable
-                      data={gisData}
-                      columns={gisColumns}
-                      type="gis"
-                    />
-                  </TabsContent>
-                </Tabs>
+                <div className="space-y-4">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-slate-600 dark:text-slate-400">کد سند:</span>
+                    <span className="font-medium">{document.doc_code}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-slate-600 dark:text-slate-400">تاریخ صدور:</span>
+                    <span className="font-medium">{document.issue_date}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-slate-600 dark:text-slate-400">تعداد بخش‌ها:</span>
+                    <span className="font-medium">{document.sections?.length || 0}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -179,14 +194,12 @@ export function DocumentDetail() {
                 نمایش PDF سند اصلی
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                {document.code} - {document.titlePersian}
+                {document.doc_code} - {document.title}
               </p>
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow-sm text-right max-w-md mx-auto">
-                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  در محیط واقعی، این بخش شامل نمایش دهنده PDF تعاملی خواهد بود که
-                  امکان مرور، بزرگنمایی، جستجو و برجسته‌سازی متن را فراهم می‌کند.
-                </p>
-              </div>
+              <Button onClick={() => window.open(document.file_url, '_blank')}>
+                <Download className="w-4 h-4 ml-2" />
+                دانلود سند
+              </Button>
             </div>
           </div>
         </div>

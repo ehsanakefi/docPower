@@ -3,7 +3,8 @@ import { Send, Sparkles, X } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
-import { aiChatHistory } from '../data/mockData';
+import { toast } from 'sonner';
+import api from '../services/api';
 
 interface AIAssistantProps {
   isOpen: boolean;
@@ -11,22 +12,53 @@ interface AIAssistantProps {
 }
 
 export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
-  const [messages, setMessages] = useState(aiChatHistory);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; message: string }>>([]);
   const [input, setInput] = useState('');
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
-    const newMessages = [
-      ...messages,
-      { role: 'user' as const, message: input },
-      {
-        role: 'assistant' as const,
-        message: 'این یک پاسخ نمونه از دستیار هوشمند است. در حالت واقعی، این پاسخ از مدل زبانی پیشرفته تولید می‌شود.',
-      },
-    ];
-    setMessages(newMessages);
+    const userMessage = input;
     setInput('');
+    
+    // Add user message immediately
+    setMessages(prev => [...prev, { role: 'user', message: userMessage }]);
+    setLoading(true);
+
+    try {
+      const response = await api.sendAIMessage(userMessage, conversationId);
+      
+      if (response.success && response.data) {
+        // Update conversation ID if new
+        if (!conversationId && response.data.conversationId) {
+          setConversationId(response.data.conversationId);
+        }
+        
+        // Add assistant response
+        setMessages(prev => [
+          ...prev,
+          { role: 'assistant', message: response.data.reply }
+        ]);
+      } else {
+        toast.error('خطا در دریافت پاسخ از دستیار هوشمند');
+        // Add error message as assistant response
+        setMessages(prev => [
+          ...prev,
+          { role: 'assistant', message: 'متأسفم، در حال حاضر نمی‌توانم به سوال شما پاسخ دهم. لطفاً دوباره تلاش کنید.' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('خطا در ارسال پیام');
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', message: 'متأسفم، خطایی رخ داده است. لطفاً دوباره تلاش کنید.' }
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -47,6 +79,14 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       {/* Chat Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center py-8">
+              <Sparkles className="w-12 h-12 text-purple-500 mx-auto mb-3" />
+              <p className="text-slate-600 dark:text-slate-400 text-sm">
+                سوال خود را بپرسید
+              </p>
+            </div>
+          )}
           {messages.map((msg, idx) => (
             <div
               key={idx}
@@ -93,6 +133,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       <div className="p-4 border-t border-slate-200 dark:border-slate-700">
         <div className="flex gap-2">
           <Button
+            disabled={loading}
             size="icon"
             className="bg-[#10B981] hover:bg-[#059669]"
             onClick={handleSend}
@@ -104,6 +145,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
             placeholder="سوال خود را بپرسید..."
             className="text-right"
             value={input}
+            disabled={loading}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           />

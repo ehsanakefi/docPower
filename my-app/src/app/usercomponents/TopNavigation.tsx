@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Bell, Moon, Sun, Settings } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -9,7 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { aiSuggestions } from '../data/mockData';
+import { toast } from 'sonner';
+import api from '../services/api';
 
 interface TopNavigationProps {
   darkMode: boolean;
@@ -25,6 +26,36 @@ export function TopNavigation({
   setSearchQuery,
 }: TopNavigationProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const userId = '1'; // In a real app, get this from auth context
+
+  useEffect(() => {
+    fetchNotifications();
+    fetchUnreadCount();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.getNotifications(userId);
+      if (response.success && response.data) {
+        setNotifications(response.data.slice(0, 5)); // Show only last 5
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await api.getUnreadNotificationCount(userId);
+      if (response.success && response.data) {
+        setUnreadCount(response.data.count);
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
 
   return (
     <div className="border-b bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-700">
@@ -51,28 +82,9 @@ export function TopNavigation({
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-            />
+          />
           </div>
           
-          {/* Smart Suggestions */}
-          {showSuggestions && searchQuery.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50">
-              <div className="p-2">
-                <p className="text-xs text-slate-500 px-3 py-2 text-right">پیشنهادات هوشمند</p>
-                {aiSuggestions
-                  .filter((s) => s.includes(searchQuery))
-                  .map((suggestion, idx) => (
-                    <button
-                      key={idx}
-                      className="w-full text-right px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-sm"
-                      onClick={() => setSearchQuery(suggestion)}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Right Side Actions */}
@@ -82,22 +94,37 @@ export function TopNavigation({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
               <div className="p-3">
                 <p className="font-semibold mb-2">اعلان‌ها</p>
-                <div className="space-y-2">
-                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded text-sm">
-                    <p className="text-right">سند جدید TAV234-18/00 منتشر شد</p>
-                    <p className="text-xs text-slate-500 text-right mt-1">2 ساعت پیش</p>
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">
+                    اعلانی وجود ندارد
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {notifications.map((notif) => (
+                      <div 
+                        key={notif.id}
+                        className={`p-2 rounded text-sm ${
+                          notif.read 
+                            ? 'bg-slate-50 dark:bg-slate-800' 
+                            : 'bg-blue-50 dark:bg-blue-900/20'
+                        }`}
+                      >
+                        <p className="text-right">{notif.message}</p>
+                        <p className="text-xs text-slate-500 text-right mt-1">
+                          {notif.timestamp}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded text-sm">
-                    <p className="text-right">به‌روزرسانی دستورالعمل GIS</p>
-                    <p className="text-xs text-slate-500 text-right mt-1">5 ساعت پیش</p>
-                  </div>
-                </div>
+                )}
               </div>
             </DropdownMenuContent>
           </DropdownMenu>

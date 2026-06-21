@@ -1,61 +1,72 @@
+import { useState, useEffect } from "react";
 import { FileText, Upload, Eye, TrendingUp } from "lucide-react";
+import api from "../services/api";
 import { Card } from "../components/ui/card";
+import { toast } from "sonner";
+
+interface Document {
+  id: string;
+  title: string;
+  doc_code: string;
+  issue_date: string;
+}
 
 export function Overview() {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
+  const loadDocuments = async () => {
+    setLoading(true);
+    try {
+      const response = await api.getDocuments();
+      if (response.success && response.data) {
+        setDocuments(response.data);
+      } else {
+        toast.error('خطا در بارگذاری اسناد');
+      }
+    } catch (error) {
+      toast.error('خطا در ارتباط با سرور');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const stats = [
     {
       label: "کل اسناد",
-      value: "1,234",
+      value: documents.length.toString(),
       icon: FileText,
       color: "bg-blue-500",
       trend: "+12.5%",
     },
     {
       label: "بارگذاری امروز",
-      value: "23",
+      value: "0",
       icon: Upload,
       color: "bg-emerald-500",
-      trend: "+5.2%",
+      trend: "+0%",
     },
     {
       label: "بازدید امروز",
-      value: "456",
+      value: "-",
       icon: Eye,
       color: "bg-purple-500",
-      trend: "+18.3%",
+      trend: "-",
     },
     {
       label: "رشد ماهانه",
-      value: "89%",
+      value: "-",
       icon: TrendingUp,
       color: "bg-orange-500",
-      trend: "+3.1%",
+      trend: "-",
     },
   ];
 
-  const recentDocuments = [
-    {
-      id: 1,
-      title: "دستورالعمل مدیریت دانش",
-      code: "TAV112-02/00",
-      date: "1403/11/19",
-      status: "منتشر شده",
-    },
-    {
-      id: 2,
-      title: "آیین‌نامه اداری",
-      code: "TAV115-05/01",
-      date: "1403/11/18",
-      status: "پیش‌نویس",
-    },
-    {
-      id: 3,
-      title: "استاندارد ایمنی",
-      code: "TAV120-03/00",
-      date: "1403/11/17",
-      status: "منتشر شده",
-    },
-  ];
+  const recentDocuments = documents.slice(0, 3);
 
   return (
     <div className="p-8">
@@ -103,42 +114,42 @@ export function Overview() {
         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
           اسناد اخیر
         </h3>
-        <div className="space-y-4">
-          {recentDocuments.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        {loading ? (
+          <p className="text-slate-500 text-center py-4">در حال بارگذاری...</p>
+        ) : recentDocuments.length > 0 ? (
+          <div className="space-y-4">
+            {recentDocuments.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">
+                      {doc.title}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      کد: {doc.doc_code}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">
-                    {doc.title}
-                  </p>
+                <div className="flex items-center gap-4">
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    کد: {doc.code}
+                    {doc.issue_date}
                   </p>
+                  <span className="px-3 py-1 rounded-full text-sm bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                    فعال
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {doc.date}
-                </p>
-                <span
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    doc.status === "منتشر شده"
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
-                  }`}
-                >
-                  {doc.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-slate-500 text-center py-4">هیچ سندی موجود نیست</p>
+        )}
       </Card>
     </div>
   );
