@@ -1,8 +1,9 @@
-import { MockPrismaClient } from './mock-prisma';
+ import { PrismaClient } from '@prisma/client'; 
+
 import { splitParagraphs, normalizePersian } from '../utils/textNormalizer';
 import { createAllChunks } from '../utils/chunker';
 
-const prisma = new MockPrismaClient();
+const prisma = new PrismaClient();
 
 export interface DocumentIngestionInput {
   documentId: string;

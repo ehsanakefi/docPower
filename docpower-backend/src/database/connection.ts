@@ -1,17 +1,13 @@
-// Using mock Prisma client for development
-// Replace with: import { PrismaClient } from '@prisma/client'; once database is set up
-import { MockPrismaClient } from '../services/mock-prisma';
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new MockPrismaClient();
+export const prisma = new PrismaClient();
 
-const connectToDatabase = async () => {
+export const connectToDatabase = async () => {
   try {
     await prisma.$connect();
-    console.log('Connected to the database successfully (using mock data for development).');
+    console.log('Connected to PostgreSQL successfully.');
   } catch (error) {
     console.error('Database connection failed:', error);
     process.exit(1);
   }
 };
-
-export { prisma, connectToDatabase };

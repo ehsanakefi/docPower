@@ -1,8 +1,9 @@
-import { MockPrismaClient } from './mock-prisma';
+ import { PrismaClient } from '@prisma/client'; 
+
 import { normalizePersian } from '../utils/textNormalizer';
 import { PythonSearchService } from './pythonSearch.service';
 
-const prisma = new MockPrismaClient();
+const prisma = new PrismaClient();
 
 export interface RAGSearchResult {
   chunkId: string;
@@ -89,7 +90,7 @@ export class RAGSearchService {
         return {
           chunkId: chunk.id,
           documentId: chunk.documentId,
-          fileName: doc?.title || chunk.metadata.fileName,
+          // fileName: doc?.title || chunk.metadata.fileName,
           text: chunk.text,
           score,
         };

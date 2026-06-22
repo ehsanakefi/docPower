@@ -49,3 +49,21 @@ model DocumentSection {
   @@map("document_sections")
   @@index([document_id])
 }
+model Chunk {
+  id            String   @id @default(uuid())
+  documentId    String
+  chunkIndex    Int
+  type          String
+  text          String
+  normalizedText String
+  paragraphStart Int
+  paragraphEnd   Int
+  charLength     Int
+
+  metadata      Json
+  embedding     Json?
+
+  createdAt     DateTime @default(now())
+
+  @@index([documentId])
+}

@@ -1,8 +1,9 @@
 // Using mock Prisma client for development
 // Replace with: import { PrismaClient } from '@prisma/client'; once database is set up
-import { MockPrismaClient } from './mock-prisma';
+ import { PrismaClient } from '@prisma/client'; 
 
-const prisma = new MockPrismaClient();
+
+const prisma = new PrismaClient();
 
 /**
  * Normalize Persian text for better search results
@@ -124,7 +125,7 @@ export const searchDocuments = async (filters: SearchFilters): Promise<SearchRes
               matched_section: {
                 id: section.id,
                 title: section.title,
-                section_type: section.section_type,
+                // section_type: section.section_type,
               },
               relevance_score: docTitleMatch ? 90 : 50, // Lower if only section matches
             });

@@ -5,18 +5,35 @@ import { prisma } from '../database/connection';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
+// export const registerUser = async (username: string, password: string) => {
+//   const hashedPassword = await bcrypt.hash(password, 10);
+//   const newUser = await prisma.user.create({
+//     username,
+//     password: hashedPassword,
+//     role: 'user'
+//   });
+//   return newUser;
+// };
 export const registerUser = async (username: string, password: string) => {
   const hashedPassword = await bcrypt.hash(password, 10);
+
   const newUser = await prisma.user.create({
-    username,
-    password: hashedPassword,
-    role: 'user'
+    data: {
+      username,
+      password: hashedPassword,
+      role: 'user'
+    }
   });
+
   return newUser;
 };
-
 export const loginUser = async (username: string, password: string) => {
-  const user = await prisma.user.findByUsername(username);
+  const user = await prisma.user.findUnique({
+  where: {
+    username: username
+  }
+});
+  console.log("Login attempt for user:", user);
   if (!user) {
     throw new Error('User not found');
   }

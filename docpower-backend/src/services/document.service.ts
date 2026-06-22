@@ -1,14 +1,12 @@
 // Using mock Prisma client for development
-// Replace with: import { PrismaClient } from '@prisma/client'; once database is set up
-import { MockPrismaClient } from './mock-prisma';
+ import { PrismaClient } from '@prisma/client'; 
 
-const prisma = new MockPrismaClient();
-
+export const prisma = new PrismaClient();
 export interface CreateDocumentData {
   title: string;
   doc_code: string;
   issue_date: string; // Jalali date as string
-  file_url: string;
+  file_url: string; 
   sections?: CreateSectionData[];
 }
 

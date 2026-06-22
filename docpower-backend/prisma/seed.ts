@@ -1,13 +1,15 @@
 import { PrismaClient } from '@prisma/client';
-
+import bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Seed users
+  console.log("Starting seed...");
+  const adminPassword = await bcrypt.hash("admin123", 10);
+  const userPassword = await bcrypt.hash("user123", 10);
   const user1 = await prisma.user.create({
     data: {
       username: 'admin',
-      password: 'admin123', // In a real application, ensure to hash passwords
+      password: adminPassword,
       role: 'admin',
     },
   });
@@ -15,39 +17,42 @@ async function main() {
   const user2 = await prisma.user.create({
     data: {
       username: 'user',
-      password: 'user123', // In a real application, ensure to hash passwords
+      password: userPassword,
       role: 'user',
     },
   });
 
-  // Seed documents
-  await prisma.document.createMany({
+  console.log("Users created");
+
+  const docs = await prisma.document.createMany({
     data: [
       {
         title: 'Introduction to Node.js',
         doc_code: 'NODE101',
-        issue_date: new Date('2023-01-01'),
+        issue_date: '2023-01-01',
         file_url: 'http://example.com/docs/node-intro.pdf',
       },
       {
         title: 'Understanding PostgreSQL',
         doc_code: 'PGSQL101',
-        issue_date: new Date('2023-02-01'),
+        issue_date: '2023-02-01',
         file_url: 'http://example.com/docs/postgresql-guide.pdf',
       },
       {
         title: 'Prisma ORM Guide',
         doc_code: 'PRISMA101',
-        issue_date: new Date('2023-03-01'),
+        issue_date: '2023-03-01',
         file_url: 'http://example.com/docs/prisma-guide.pdf',
       },
     ],
   });
+
+  console.log("Documents created:", docs.count);
 }
 
 main()
-  .catch(e => {
-    console.error(e);
+  .catch((e) => {
+    console.error("Seed error:", e);
     process.exit(1);
   })
   .finally(async () => {

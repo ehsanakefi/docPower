@@ -1,12 +1,13 @@
-import { MockPrismaClient } from './mock-prisma';
+import { PrismaClient } from '@prisma/client'; 
+
 import { normalizePersian } from '../utils/textNormalizer';
 
-const prisma = new MockPrismaClient();
+const prisma = new PrismaClient();
 
 export interface SimpleSearchResult {
   chunkId: string;
   documentId: string;
-  fileName: string;
+  // fileName: string;
   text: string;
   snippet: string;
   score: number;
@@ -54,7 +55,7 @@ export class SimpleSearchService {
       return {
         chunkId: chunk.id,
         documentId: chunk.documentId,
-        fileName: doc?.title || chunk.metadata.fileName,
+        // fileName: doc?.title || chunk.metadata.fileName,
         text: chunk.text,
         snippet,
         score: this.calculateSimpleScore(chunk.normalizedText, normalizedQuery),
