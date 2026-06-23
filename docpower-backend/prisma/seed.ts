@@ -5,23 +5,31 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Starting seed...");
   const adminPassword = await bcrypt.hash("admin123", 10);
-  const userPassword = await bcrypt.hash("user123", 10);
+  const viewerPassword = await bcrypt.hash("viewer123", 10);
+  const editorPassword = await bcrypt.hash("editor123", 10);
   const user1 = await prisma.user.create({
     data: {
       username: 'admin',
       password: adminPassword,
-      role: 'admin',
+      role: 'ADMIN',
     },
   });
 
   const user2 = await prisma.user.create({
     data: {
-      username: 'user',
-      password: userPassword,
-      role: 'user',
+      username: 'viewer',
+      password: viewerPassword,
+      role: 'VIEWER',
     },
   });
 
+  const user3 = await prisma.user.create({
+    data: {
+      username: 'editor',
+      password: editorPassword,
+      role: 'EDITOR',
+    },
+  });
   console.log("Users created");
 
   const docs = await prisma.document.createMany({
@@ -29,20 +37,17 @@ async function main() {
       {
         title: 'Introduction to Node.js',
         doc_code: 'NODE101',
-        issue_date: '2023-01-01',
-        file_url: 'http://example.com/docs/node-intro.pdf',
+        issue_date: new Date('2023-01-01'),
       },
       {
         title: 'Understanding PostgreSQL',
         doc_code: 'PGSQL101',
-        issue_date: '2023-02-01',
-        file_url: 'http://example.com/docs/postgresql-guide.pdf',
+        issue_date: new Date('2023-02-01')  ,
       },
       {
         title: 'Prisma ORM Guide',
         doc_code: 'PRISMA101',
-        issue_date: '2023-03-01',
-        file_url: 'http://example.com/docs/prisma-guide.pdf',
+        issue_date: new Date('2023-03-01'),
       },
     ],
   });

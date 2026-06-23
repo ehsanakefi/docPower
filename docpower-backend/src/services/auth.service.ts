@@ -21,7 +21,7 @@ export const registerUser = async (username: string, password: string) => {
     data: {
       username,
       password: hashedPassword,
-      role: 'user'
+      role: 'EDITOR'
     }
   });
 
