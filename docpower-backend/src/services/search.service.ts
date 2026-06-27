@@ -23,22 +23,17 @@ const normalizePersianText = (text: string): string => {
 export interface SearchFilters {
   title?: string;
   doc_code?: string;
-  issue_date_from?: string;
-  issue_date_to?: string;
+  issue_date_from?: Date | null;
+  issue_date_to?: Date | null;
 }
 
 export interface SearchResult {
   id: string;
   title: string;
   doc_code: string;
-  issue_date: string;
+  issue_date: Date | null;
   file_url: string;
-  match_type: 'document_title' | 'section_title';
-  matched_section?: {
-    id: string;
-    title: string;
-    section_type?: string;
-  };
+  match_type: 'document_title';
   relevance_score: number;
 }
 
@@ -60,17 +55,7 @@ export const searchDocuments = async (filters: SearchFilters): Promise<SearchRes
               mode: 'insensitive',
             },
           },
-          // Search in section titles
-          {
-            sections: {
-              some: {
-                title: {
-                  contains: normalizedTitle,
-                  mode: 'insensitive',
-                },
-              },
-            },
-          },
+           
         ],
         // Apply other filters
         ...(filters.doc_code && {
@@ -87,8 +72,16 @@ export const searchDocuments = async (filters: SearchFilters): Promise<SearchRes
         },
       },
       include: {
-        sections: true,
-      },
+  versions: {
+    orderBy: {
+      versionNumber: 'desc',
+    },
+    take: 1,
+  },
+}
+      // include: {
+      //   sections: true,
+      // },
     });
 
     // Process results and add ranking
@@ -103,35 +96,36 @@ export const searchDocuments = async (filters: SearchFilters): Promise<SearchRes
           title: doc.title,
           doc_code: doc.doc_code,
           issue_date: doc.issue_date,
-          file_url: doc.file_url,
+          // file_url: doc.file_url,
+          file_url: doc.versions[0]?.file_url ?? '',
           match_type: 'document_title',
           relevance_score: 100,
         });
       }
       
       // Check for section matches
-      if (doc.sections) {
-        for (const section of doc.sections) {
-          const normalizedSectionTitle = normalizePersianText(section.title);
-          if (normalizedSectionTitle.toLowerCase().includes(normalizedTitle.toLowerCase())) {
-            // Section title match - lower relevance score
-            results.push({
-              id: doc.id,
-              title: doc.title,
-              doc_code: doc.doc_code,
-              issue_date: doc.issue_date,
-              file_url: doc.file_url,
-              match_type: 'section_title',
-              matched_section: {
-                id: section.id,
-                title: section.title,
-                // section_type: section.section_type,
-              },
-              relevance_score: docTitleMatch ? 90 : 50, // Lower if only section matches
-            });
-          }
-        }
-      }
+      // if (doc.sections) {
+      //   for (const section of doc.sections) {
+      //     const normalizedSectionTitle = normalizePersianText(section.title);
+      //     if (normalizedSectionTitle.toLowerCase().includes(normalizedTitle.toLowerCase())) {
+      //       // Section title match - lower relevance score
+      //       results.push({
+      //         id: doc.id,
+      //         title: doc.title,
+      //         doc_code: doc.doc_code,
+      //         issue_date: doc.issue_date,
+      //         file_url: doc.file_url,
+      //         match_type: 'chunk_text',
+      //         matched_section: {
+      //           id: section.id,
+      //           title: section.title,
+      //           // section_type: section.section_type,
+      //         },
+      //         relevance_score: docTitleMatch ? 90 : 50, // Lower if only section matches
+      //       });
+      //     }
+      //   }
+      // }
     }
   } else {
     // Non-title search - use existing logic
@@ -161,8 +155,16 @@ export const searchDocuments = async (filters: SearchFilters): Promise<SearchRes
     const documents = await prisma.document.findMany({
       where: whereConditions,
       include: {
-        sections: true,
-      },
+        versions: {
+          orderBy: {
+            versionNumber: 'desc',
+          },
+        take: 1,
+    },
+  },
+      // include: {
+      //   sections: true,
+      // },
     });
 
     // Convert to search results format
@@ -172,7 +174,7 @@ export const searchDocuments = async (filters: SearchFilters): Promise<SearchRes
         title: doc.title,
         doc_code: doc.doc_code,
         issue_date: doc.issue_date,
-        file_url: doc.file_url,
+        file_url: doc.versions[0]?.file_url ?? '',
         match_type: 'document_title',
         relevance_score: 80,
       });
@@ -180,15 +182,27 @@ export const searchDocuments = async (filters: SearchFilters): Promise<SearchRes
   }
 
   // Remove duplicates and sort by relevance score (highest first) then by date
-  const uniqueResults = Array.from(
-    new Map(results.map(item => [`${item.id}-${item.match_type}-${item.matched_section?.id || ''}`, item])).values()
-  );
+//   const uniqueResults = Array.from(
+//     // new Map(results.map(item => [`${item.id}-${item.match_type}-${item.matched_section?.id || ''}`, item])).values()
+//     new Map(
+//     results.map(item => [
+//         `${item.id}-${item.match_type}`,
+//         item
+//     ])
+// )
+//   );
+const uniqueResults = [...new Map(
+    results.map(item => [`${item.id}-${item.match_type}`, item])
+).values()];
 
   return uniqueResults.sort((a, b) => {
     if (a.relevance_score !== b.relevance_score) {
       return b.relevance_score - a.relevance_score;
     }
-    return b.issue_date.localeCompare(a.issue_date);
+    return (
+    (b.issue_date?.getTime() ?? 0) -
+    (a.issue_date?.getTime() ?? 0)
+);
   });
 };
 
@@ -207,7 +221,7 @@ export const searchDocumentsByTitle = async (title: string) => {
         title: true,
         doc_code: true,
         issue_date: true,
-        file_url: true,
+        // file_url: true,
       },
       orderBy: {
         issue_date: 'desc',

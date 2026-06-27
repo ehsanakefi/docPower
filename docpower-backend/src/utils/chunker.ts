@@ -1,9 +1,10 @@
 import { normalizePersian } from './textNormalizer';
-
-export type ChunkType = 'paragraph' | 'retrieval' | 'rag';
+import { ChunkType } from "@prisma/client";
+// export type ChunkType = 'paragraph' | 'retrieval' | 'rag';
 
 export interface ChunkData {
   documentId: string;
+  versionId :string;
   chunkIndex: number;
   type: ChunkType;
   text: string;
@@ -43,11 +44,13 @@ function buildParagraphChunks(
   documentId: string,
   fileName: string,
   uploadDate: string,
+  versionId: string
 ): ChunkData[] {
   return paragraphs.map((text, index) => ({
     documentId,
+    versionId,
     chunkIndex: index,
-    type: 'paragraph' as ChunkType,
+    type: 'PARAGRAPH' as ChunkType,
     text,
     normalizedText: normalizePersian(text),
     paragraphStart: index,
@@ -67,6 +70,7 @@ function buildWindowedChunks(
   uploadDate: string,
   type: ChunkType,
   config: ChunkConfig,
+  versionId: string
 ): ChunkData[] {
   const chunks: ChunkData[] = [];
   let chunkIndex = 0;
@@ -91,6 +95,7 @@ function buildWindowedChunks(
 
     chunks.push({
       documentId,
+      versionId,
       chunkIndex,
       type,
       text: combinedText,
@@ -117,15 +122,16 @@ export function createAllChunks(
   documentId: string,
   fileName: string,
   uploadDate: string,
+  versionId: string
 ): ChunkData[] {
   if (paragraphs.length === 0) return [];
 
-  const paragraphChunks = buildParagraphChunks(paragraphs, documentId, fileName, uploadDate);
+  const paragraphChunks = buildParagraphChunks(paragraphs, documentId, fileName, uploadDate, versionId);
   const retrievalChunks = buildWindowedChunks(
-    paragraphs, documentId, fileName, uploadDate, 'retrieval', RETRIEVAL_CONFIG,
+    paragraphs, documentId, fileName, uploadDate, 'RETRIEVAL', RETRIEVAL_CONFIG, versionId  
   );
   const ragChunks = buildWindowedChunks(
-    paragraphs, documentId, fileName, uploadDate, 'rag', RAG_CONFIG,
+    paragraphs, documentId, fileName, uploadDate, 'RAG', RAG_CONFIG, versionId
   );
 
   return [...paragraphChunks, ...retrievalChunks, ...ragChunks];

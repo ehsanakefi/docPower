@@ -35,7 +35,7 @@ export class RAGSearchService {
     // Get RAG chunks
     const chunks = await prisma.chunk.findMany({
       where: {
-        type: 'rag',
+        type: 'RAG',
       },
     });
 

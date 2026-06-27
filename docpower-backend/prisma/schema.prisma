@@ -48,6 +48,10 @@ model User {
 
   created_at  DateTime @default(now())
 
+  // Relations
+  createdDocuments  Document[]        @relation("DocumentCreatedBy")
+  uploadedVersions  DocumentVersion[] @relation("VersionUploadedBy")
+
   @@map("users")
 }
 
@@ -56,21 +60,28 @@ model User {
 //////////////////////////////////////////////////////
 
 model Document {
-  id            String   @id @default(uuid())
+  id                String   @id @default(uuid())
 
-  title         String
-  doc_code      String   @unique
+  title             String
+  doc_code          String   @unique
 
-  issue_date    DateTime?
+  issue_date        DateTime?
   issue_date_jalali String?
 
-  status        DocumentStatus @default(ACTIVE)
+  status            DocumentStatus @default(ACTIVE)
 
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  chunks          Chunk[]
-  versions      DocumentVersion[]
+  // Audit fields
+  createdById       String?
+  created_by        User? @relation("DocumentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Relations
+  chunks            Chunk[]
+  versions          DocumentVersion[]
+
+  @@index([createdById])
   @@map("documents")
 }
 
@@ -79,25 +90,30 @@ model Document {
 //////////////////////////////////////////////////////
 
 model DocumentVersion {
-  id            String   @id @default(uuid())
+  id              String   @id @default(uuid())
 
-  documentId    String
-  versionNumber Int
+  documentId      String
+  versionNumber   Int
 
-  file_url      String
-  file_size     Int?
+  file_url        String
+  file_size       Int?
 
-  created_at    DateTime @default(now())
+  // Audit fields
+  uploadedById    String?
+  uploaded_by     User? @relation("VersionUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
 
-  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  created_at      DateTime @default(now())
 
-  chunks        Chunk[]
+  // Relations
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunks          Chunk[]
 
   @@unique([documentId, versionNumber])
   @@index([documentId])
+  @@index([uploadedById])
   @@map("document_versions")
 }
- 
+
 //////////////////////////////////////////////////////
 // CHUNKS
 //////////////////////////////////////////////////////
@@ -107,8 +123,8 @@ model Chunk {
 
   versionId       String
   documentId      String
-  
-  pageNumber Int?
+
+  pageNumber      Int?
   chunkIndex      Int
   type            ChunkType
 
@@ -124,6 +140,7 @@ model Chunk {
 
   createdAt       DateTime @default(now())
 
+  // Relations
   document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   version         DocumentVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
 
@@ -131,7 +148,6 @@ model Chunk {
 
   @@index([documentId])
   @@index([versionId])
- 
   @@index([type])
   @@index([chunkIndex])
   @@map("chunks")
@@ -151,6 +167,7 @@ model Embedding {
 
   createdAt DateTime @default(now())
 
+  // Relations
   chunk     Chunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
 
   @@map("embeddings")

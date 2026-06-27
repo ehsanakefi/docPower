@@ -1,4 +1,5 @@
-import { ChunkType } from '../utils/chunker';
+// import { ChunkType } from '../utils/chunker';
+import { ChunkType } from "@prisma/client";
 
 export interface Chunk {
   id: string;

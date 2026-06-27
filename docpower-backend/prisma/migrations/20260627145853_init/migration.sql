@@ -15,7 +15,7 @@ CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT E'VIEWER',
+    "role" "UserRole" NOT NULL DEFAULT 'VIEWER',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
@@ -28,7 +28,8 @@ CREATE TABLE "documents" (
     "doc_code" TEXT NOT NULL,
     "issue_date" TIMESTAMP(3),
     "issue_date_jalali" TEXT,
-    "status" "DocumentStatus" NOT NULL DEFAULT E'ACTIVE',
+    "status" "DocumentStatus" NOT NULL DEFAULT 'ACTIVE',
+    "createdById" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -42,6 +43,7 @@ CREATE TABLE "document_versions" (
     "versionNumber" INTEGER NOT NULL,
     "file_url" TEXT NOT NULL,
     "file_size" INTEGER,
+    "uploadedById" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "document_versions_pkey" PRIMARY KEY ("id")
@@ -84,7 +86,13 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 CREATE UNIQUE INDEX "documents_doc_code_key" ON "documents"("doc_code");
 
 -- CreateIndex
+CREATE INDEX "documents_createdById_idx" ON "documents"("createdById");
+
+-- CreateIndex
 CREATE INDEX "document_versions_documentId_idx" ON "document_versions"("documentId");
+
+-- CreateIndex
+CREATE INDEX "document_versions_uploadedById_idx" ON "document_versions"("uploadedById");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "document_versions_documentId_versionNumber_key" ON "document_versions"("documentId", "versionNumber");
@@ -103,6 +111,12 @@ CREATE INDEX "chunks_chunkIndex_idx" ON "chunks"("chunkIndex");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "embeddings_chunkId_key" ON "embeddings"("chunkId");
+
+-- AddForeignKey
+ALTER TABLE "documents" ADD CONSTRAINT "documents_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "document_versions" ADD CONSTRAINT "document_versions_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "document_versions" ADD CONSTRAINT "document_versions_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"("id") ON DELETE CASCADE ON UPDATE CASCADE;

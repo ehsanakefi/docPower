@@ -36,7 +36,7 @@ export class IRSearchService {
     // Get retrieval chunks
     const chunks = await prisma.chunk.findMany({
       where: {
-        type: 'retrieval',
+        type: 'RETRIEVAL',
       },
     });
 

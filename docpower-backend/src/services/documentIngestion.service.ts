@@ -32,7 +32,7 @@ export interface IngestionResult {
  */
 export class DocumentIngestionService {
   async ingestDocument(input: DocumentIngestionInput): Promise<IngestionResult> {
-    const { documentId, fileName, rawText } = input;
+    const { documentId, fileName, rawText, versionId } = input;
 
     // Step 1: Normalize
     const normalizedText = normalizePersian(rawText);
@@ -46,7 +46,7 @@ export class DocumentIngestionService {
 
     // Step 3: Create chunks
     const uploadDate = new Date().toISOString();
-    const allChunks = createAllChunks(paragraphs, documentId, fileName, uploadDate);
+    const allChunks = createAllChunks(paragraphs, documentId, fileName, uploadDate, versionId);
 
     // Step 4: Store chunks
     await prisma.chunk.createMany({
@@ -55,9 +55,9 @@ export class DocumentIngestionService {
 
     // Compute statistics
     const chunksByType = {
-      paragraph: allChunks.filter(c => c.type === 'paragraph').length,
-      retrieval: allChunks.filter(c => c.type === 'retrieval').length,
-      rag: allChunks.filter(c => c.type === 'rag').length,
+      paragraph: allChunks.filter(c => c.type === 'PARAGRAPH').length,
+      retrieval: allChunks.filter(c => c.type === 'RETRIEVAL').length,
+      rag: allChunks.filter(c => c.type === 'RAG').length,
     };
 
     return {
@@ -88,9 +88,9 @@ export class DocumentIngestionService {
     return {
       total: chunks.length,
       byType: {
-        paragraph: chunks.filter(c => c.type === 'paragraph').length,
-        retrieval: chunks.filter(c => c.type === 'retrieval').length,
-        rag: chunks.filter(c => c.type === 'rag').length,
+        paragraph: chunks.filter(c => c.type === 'PARAGRAPH').length,
+        retrieval: chunks.filter(c => c.type === 'RETRIEVAL').length,
+        rag: chunks.filter(c => c.type === 'RAG').length,
       },
     };
   }

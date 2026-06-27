@@ -28,7 +28,7 @@ export class SimpleSearchService {
     // Search in paragraph chunks only
     const chunks = await prisma.chunk.findMany({
       where: {
-        type: 'paragraph',
+        type: 'PARAGRAPH',
         normalizedText: {
           contains: normalizedQuery,
         },
