@@ -6,6 +6,7 @@ import { createAllChunks } from '../utils/chunker';
 const prisma = new PrismaClient();
 
 export interface DocumentIngestionInput {
+  versionId: string;
   documentId: string;
   fileName: string;
   rawText: string;

@@ -1,5 +1,9 @@
 import { Request, Response } from 'express';
-import { DocumentService, CreateDocumentData } from '../services/document.service';
+import {
+  DocumentService,
+  CreateDocumentData,
+  UpdateDocumentData,
+} from '../services/document.service';
 import { DocumentIngestionService } from '../services/documentIngestion.service';
 import { extractTextFromDocx } from '../utils/docxExtractor';
 import multer, { FileFilterCallback } from 'multer';
@@ -13,10 +17,15 @@ const upload = multer({
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB limit
   },
-  fileFilter: (req: Express.Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+  fileFilter: (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb: FileFilterCallback
+  ) => {
     if (
-      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      file.originalname.endsWith('.docx')
+      file.mimetype ===
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.originalname.toLowerCase().endsWith('.docx')
     ) {
       cb(null, true);
     } else {
@@ -29,47 +38,45 @@ export const uploadMiddleware = upload.single('file');
 
 export const addDocument = async (req: Request, res: Response) => {
   try {
-    const { title, doc_code, issue_date, file_url, sections }: CreateDocumentData = req.body;
-    
-    // Validate required fields
-    if (!title || !doc_code || !issue_date || !file_url) {
-      return res.status(400).json({ 
+    const {
+      title,
+      doc_code,
+      issue_date,
+      issue_date_jalali,
+      file_url,
+      file_size,
+      status,
+    }: CreateDocumentData = req.body;
+
+    if (!title || !doc_code || !file_url) {
+      return res.status(400).json({
         success: false,
-        message: 'All fields are required: title, doc_code, issue_date, file_url' 
+        message: 'Required fields: title, doc_code, file_url',
       });
     }
 
-    // Validate sections if provided
-    if (sections && Array.isArray(sections)) {
-      for (const section of sections) {
-        if (!section.title) {
-          return res.status(400).json({
-            success: false,
-            message: 'Each section must have a title'
-          });
-        }
-      }
-    }
-
-    const newDocument = await documentService.addDocument({ 
-      title, 
-      doc_code, 
-      issue_date, 
+    const newDocument = await documentService.addDocument({
+      title,
+      doc_code,
+      issue_date,
+      issue_date_jalali,
       file_url,
-      sections: sections || []
+      file_size,
+      status,
     });
-    
-    res.status(201).json({
+
+    return res.status(201).json({
       success: true,
       message: 'Document added successfully',
-      data: newDocument
+      data: newDocument,
     });
   } catch (error) {
     console.error('Add document error:', error);
-    res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
-      message: 'Error adding document', 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Error adding document',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
@@ -77,17 +84,19 @@ export const addDocument = async (req: Request, res: Response) => {
 export const getDocuments = async (req: Request, res: Response) => {
   try {
     const documents = await documentService.getDocuments();
-    res.status(200).json({
+
+    return res.status(200).json({
       success: true,
       count: documents.length,
-      data: documents
+      data: documents,
     });
   } catch (error) {
     console.error('Get documents error:', error);
-    res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
-      message: 'Error retrieving documents', 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Error retrieving documents',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
@@ -95,33 +104,34 @@ export const getDocuments = async (req: Request, res: Response) => {
 export const getDocumentById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     if (!id || Array.isArray(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid document ID'
+        message: 'Invalid document ID',
       });
     }
-    
+
     const document = await documentService.getDocumentById(id);
-    
+
     if (!document) {
       return res.status(404).json({
         success: false,
-        message: 'Document not found'
+        message: 'Document not found',
       });
     }
-    
-    res.status(200).json({
+
+    return res.status(200).json({
       success: true,
-      data: document
+      data: document,
     });
   } catch (error) {
     console.error('Get document by ID error:', error);
-    res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
-      message: 'Error retrieving document', 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Error retrieving document',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
@@ -129,50 +139,51 @@ export const getDocumentById = async (req: Request, res: Response) => {
 export const updateDocument = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const updateData: Partial<CreateDocumentData> = req.body;
-    
+    const updateData: UpdateDocumentData = req.body;
+
     if (!id || Array.isArray(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid document ID'
+        message: 'Invalid document ID',
       });
     }
-    
+
     const updatedDocument = await documentService.updateDocument(id, updateData);
-    
-    res.status(200).json({
+
+    return res.status(200).json({
       success: true,
       message: 'Document updated successfully',
-      data: updatedDocument
+      data: updatedDocument,
     });
   } catch (error) {
     console.error('Update document error:', error);
-    res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
-      message: 'Error updating document', 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Error updating document',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
 
 /**
  * Upload and process a .docx document with full ingestion pipeline.
- * 
+ *
  * POST /api/documents/upload
  * Content-Type: multipart/form-data
- * 
+ *
  * Fields:
  *  - file: .docx file
  *  - title: document title
  *  - doc_code: document code
- *  - issue_date: Jalali date
+ *  - issue_date: Gregorian date, optional
+ *  - issue_date_jalali: Jalali date, optional
  */
 export const uploadDocument = async (req: Request, res: Response) => {
   try {
     const file = req.file;
-    const { title, doc_code, issue_date } = req.body;
+    const { title, doc_code, issue_date, issue_date_jalali } = req.body;
 
-    // Validate file
     if (!file) {
       return res.status(400).json({
         success: false,
@@ -180,15 +191,20 @@ export const uploadDocument = async (req: Request, res: Response) => {
       });
     }
 
-    // Validate required fields
-    if (!title || !doc_code || !issue_date) {
+    if (!title || !doc_code) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: title, doc_code, issue_date',
+        message: 'Missing required fields: title, doc_code',
       });
     }
 
-    // Step 1: Extract text from .docx
+    if (!issue_date && !issue_date_jalali) {
+      return res.status(400).json({
+        success: false,
+        message: 'One of issue_date or issue_date_jalali is required',
+      });
+    }
+
     const rawText = await extractTextFromDocx(file.buffer);
 
     if (!rawText || rawText.trim().length === 0) {
@@ -198,12 +214,13 @@ export const uploadDocument = async (req: Request, res: Response) => {
       });
     }
 
-    // Step 2: Create document record
     const document = await documentService.addDocument({
       title,
       doc_code,
       issue_date,
+      issue_date_jalali,
       file_url: `/uploads/${file.originalname}`,
+      file_size: file.size,
     });
 
     if (!document) {
@@ -213,9 +230,18 @@ export const uploadDocument = async (req: Request, res: Response) => {
       });
     }
 
-    // Step 3: Run ingestion pipeline (normalize, chunk, store)
+    const latestVersion = document.versions?.[0];
+
+    if (!latestVersion) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create document version',
+      });
+    }
+
     const ingestionResult = await ingestionService.ingestDocument({
       documentId: document.id,
+      versionId: latestVersion.id,
       fileName: file.originalname,
       rawText,
     });
@@ -230,6 +256,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Upload document error:', error);
+
     return res.status(500).json({
       success: false,
       message: 'Error uploading document',
@@ -241,29 +268,27 @@ export const uploadDocument = async (req: Request, res: Response) => {
 export const deleteDocument = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     if (!id || Array.isArray(id)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid document ID'
+        message: 'Invalid document ID',
       });
     }
-    
-    // Delete associated chunks
-    await ingestionService.deleteDocumentChunks(id);
-    
+
     await documentService.deleteDocument(id);
-    
-    res.status(200).json({
+
+    return res.status(200).json({
       success: true,
-      message: 'Document deleted successfully'
+      message: 'Document deleted successfully',
     });
   } catch (error) {
     console.error('Delete document error:', error);
-    res.status(500).json({ 
+
+    return res.status(500).json({
       success: false,
-      message: 'Error deleting document', 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Error deleting document',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };

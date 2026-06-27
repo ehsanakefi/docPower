@@ -91,7 +91,6 @@ model DocumentVersion {
 
   document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  sections      DocumentSection[]
   chunks        Chunk[]
 
   @@unique([documentId, versionNumber])

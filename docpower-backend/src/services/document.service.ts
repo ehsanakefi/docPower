@@ -1,61 +1,157 @@
-// Using mock Prisma client for development
- import { PrismaClient } from '@prisma/client'; 
+import {
+  PrismaClient,
+  Prisma,
+  DocumentStatus,
+  ChunkType,
+} from '@prisma/client';
 
-export const prisma = new PrismaClient();
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+};
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
+export interface CreateChunkData {
+  pageNumber?: number;
+  chunkIndex: number;
+  type?: ChunkType;
+  text: string;
+  normalizedText?: string;
+  paragraphStart?: number;
+  paragraphEnd?: number;
+  charLength?: number;
+  metadata?: Prisma.InputJsonValue;
+  embedding?: {
+    vector: Prisma.InputJsonValue;
+    model: string;
+  };
+}
+
 export interface CreateDocumentData {
   title: string;
   doc_code: string;
-  issue_date: string; // Jalali date as string
-  file_url: string; 
-  sections?: CreateSectionData[];
+  issue_date?: string | Date;
+  issue_date_jalali?: string;
+  status?: DocumentStatus;
+  file_url: string;
+  file_size?: number;
+  chunks?: CreateChunkData[];
 }
 
-export interface CreateSectionData {
-  title: string;
-  section_type?: string;
-  order_index?: number;
+export interface UpdateDocumentData {
+  title?: string;
+  doc_code?: string;
+  issue_date?: string | Date | null;
+  issue_date_jalali?: string | null;
+  status?: DocumentStatus;
+  file_url?: string;
+  file_size?: number | null;
+  chunks?: CreateChunkData[];
+}
+
+function parseDate(value?: string | Date | null): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('Invalid issue_date');
+  }
+
+  return date;
+}
+
+function mapChunks(
+  documentId: string,
+  chunks: CreateChunkData[]
+): Prisma.ChunkCreateWithoutVersionInput[] {
+  return chunks.map((chunk) => ({
+    document: {
+      connect: { id: documentId },
+    },
+    pageNumber: chunk.pageNumber,
+    chunkIndex: chunk.chunkIndex,
+    type: chunk.type ?? ChunkType.PARAGRAPH,
+    text: chunk.text,
+    normalizedText: chunk.normalizedText ?? chunk.text,
+    paragraphStart: chunk.paragraphStart,
+    paragraphEnd: chunk.paragraphEnd,
+    charLength: chunk.charLength ?? chunk.text.length,
+    metadata: chunk.metadata,
+    embedding: chunk.embedding
+      ? {
+          create: {
+            vector: chunk.embedding.vector,
+            model: chunk.embedding.model,
+          },
+        }
+      : undefined,
+  }));
 }
 
 export class DocumentService {
-  async addDocument(data: CreateDocumentData) {
+  async addDocument(data: CreateDocumentData)  {
     try {
-      // Separate sections from document data
-      const { sections, ...documentData } = data;
-      
-      // Create document
-      const document = await prisma.document.create({
-        data: documentData,
-        include: {
-          sections: true,
-        },
-      });
+      const {
+        file_url,
+        file_size,
+        chunks = [],
+        issue_date,
+        issue_date_jalali,
+        ...documentData
+      } = data;
 
-      // Create sections if provided
-      if (sections && sections.length > 0) {
-        await prisma.documentSection.createMany({
-          data: sections.map((section, index) => ({
-            document_id: document.id,
-            title: section.title,
-            section_type: section.section_type || 'section',
-            order_index: section.order_index || index + 1,
-          })),
+      return await prisma.$transaction(async (tx) => {
+        const document = await tx.document.create({
+          data: {
+            ...documentData,
+            issue_date: parseDate(issue_date),
+            issue_date_jalali,
+          },
         });
 
-        // Fetch document with sections
-        return await prisma.document.findUnique({
+        await tx.documentVersion.create({
+          data: {
+            documentId: document.id,
+            versionNumber: 1,
+            file_url,
+            file_size,
+            chunks:
+              chunks.length > 0
+                ? {
+                    create: mapChunks(document.id, chunks),
+                  }
+                : undefined,
+          },
+        });
+
+        return tx.document.findUnique({
           where: { id: document.id },
           include: {
-            sections: {
-              orderBy: { order_index: 'asc' },
+            versions: {
+              orderBy: { versionNumber: 'desc' },
+              include: {
+                chunks: {
+                  orderBy: { chunkIndex: 'asc' },
+                  include: {
+                    embedding: true,
+                  },
+                },
+              },
             },
           },
         });
-      }
-
-      return document;
+      });
     } catch (error) {
       console.error('Error adding document:', error);
-      throw new Error('Failed to add document');
+      throw new Error(
+        error instanceof Error ? error.message : 'Failed to add document'
+      );
     }
   }
 
@@ -64,8 +160,16 @@ export class DocumentService {
       return await prisma.document.findUnique({
         where: { id },
         include: {
-          sections: {
-            orderBy: { order_index: 'asc' },
+          versions: {
+            orderBy: { versionNumber: 'desc' },
+            include: {
+              chunks: {
+                orderBy: { chunkIndex: 'asc' },
+                include: {
+                  embedding: true,
+                },
+              },
+            },
           },
         },
       });
@@ -79,8 +183,8 @@ export class DocumentService {
     try {
       return await prisma.document.findMany({
         include: {
-          sections: {
-            orderBy: { order_index: 'asc' },
+          versions: {
+            orderBy: { versionNumber: 'desc' },
           },
         },
         orderBy: {
@@ -93,54 +197,117 @@ export class DocumentService {
     }
   }
 
-  async updateDocument(id: string, data: Partial<CreateDocumentData>) {
+  async updateDocument(id: string, data: UpdateDocumentData) {
     try {
-      const { sections, ...documentData } = data;
-      
-      // Update document
-      const document = await prisma.document.update({
-        where: { id },
-        data: documentData,
-      });
-
-      // If sections are provided, replace existing sections
-      if (sections !== undefined) {
-        // Delete existing sections
-        await prisma.documentSection.deleteMany({
-          where: { document_id: id },
+      return await prisma.$transaction(async (tx) => {
+        const existingDocument = await tx.document.findUnique({
+          where: { id },
+          select: { id: true },
         });
 
-        // Create new sections
-        if (sections.length > 0) {
-          await prisma.documentSection.createMany({
-            data: sections.map((section, index) => ({
-              document_id: id,
-              title: section.title,
-              section_type: section.section_type || 'section',
-              order_index: section.order_index || index + 1,
-            })),
+        if (!existingDocument) {
+          throw new Error('Document not found');
+        }
+
+        const {
+          file_url,
+          file_size,
+          chunks,
+          issue_date,
+          issue_date_jalali,
+          ...documentFields
+        } = data;
+
+        const updatePayload: Prisma.DocumentUpdateInput = {};
+
+        if (documentFields.title !== undefined) {
+          updatePayload.title = documentFields.title;
+        }
+
+        if (documentFields.doc_code !== undefined) {
+          updatePayload.doc_code = documentFields.doc_code;
+        }
+
+        if (documentFields.status !== undefined) {
+          updatePayload.status = documentFields.status;
+        }
+
+        if (issue_date !== undefined) {
+          updatePayload.issue_date = parseDate(issue_date);
+        }
+
+        if (issue_date_jalali !== undefined) {
+          updatePayload.issue_date_jalali = issue_date_jalali;
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
+          await tx.document.update({
+            where: { id },
+            data: updatePayload,
           });
         }
-      }
 
-      // Return updated document with sections
-      return await prisma.document.findUnique({
-        where: { id },
-        include: {
-          sections: {
-            orderBy: { order_index: 'asc' },
+        const shouldCreateNewVersion =
+          file_url !== undefined ||
+          file_size !== undefined ||
+          chunks !== undefined;
+
+        if (shouldCreateNewVersion) {
+          if (!file_url) {
+            throw new Error('file_url is required to create a new version');
+          }
+
+          const latestVersion = await tx.documentVersion.findFirst({
+            where: { documentId: id },
+            orderBy: { versionNumber: 'desc' },
+            select: { versionNumber: true },
+          });
+
+          const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
+
+          await tx.documentVersion.create({
+            data: {
+              documentId: id,
+              versionNumber: nextVersionNumber,
+              file_url,
+              file_size: file_size ?? undefined,
+              chunks:
+                chunks && chunks.length > 0
+                  ? {
+                      create: mapChunks(id, chunks),
+                    }
+                  : undefined,
+            },
+          });
+        }
+
+        return tx.document.findUnique({
+          where: { id },
+          include: {
+            versions: {
+              orderBy: { versionNumber: 'desc' },
+              include: {
+                chunks: {
+                  orderBy: { chunkIndex: 'asc' },
+                  include: {
+                    embedding: true,
+                  },
+                },
+              },
+            },
           },
-        },
+        });
       });
     } catch (error) {
       console.error('Error updating document:', error);
-      throw new Error('Failed to update document');
+      throw new Error(
+        error instanceof Error ? error.message : 'Failed to update document'
+      );
     }
   }
 
   async deleteDocument(id: string) {
     try {
-      // Sections will be deleted automatically due to CASCADE
       return await prisma.document.delete({
         where: { id },
       });
