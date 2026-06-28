@@ -12,6 +12,7 @@ import notificationsRoutes from './routes/notifications.routes';
 import aiRoutes from './routes/ai.routes';
 import filterRoutes from './routes/filter.routes';
 import { connectToDatabase } from './database/connection';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
@@ -38,7 +39,7 @@ app.use('/api/logs', logsRoutes);                // System logs endpoints
 app.use('/api/notifications', notificationsRoutes); // Notifications endpoints
 app.use('/api/ai', aiRoutes);                    // AI assistant endpoints
 app.use('/api/filter', filterRoutes);            // Filter endpoints
-
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 

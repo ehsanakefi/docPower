@@ -112,27 +112,67 @@ class ApiService {
     });
   }
 
-  async uploadDocument(formData: FormData) {
-    const headers: HeadersInit = {};
+  // async uploadDocument(formData: FormData,
+  //   onProgress?: (percent: number) => void
+  // ) : Promise<any> {
+  //   const headers: HeadersInit = {};
+  //   if (this.token) {
+  //     headers['Authorization'] = `Bearer ${this.token}`;
+  //   }
+
+  //   try {
+  //     const response = await fetch(`${this.baseUrl}/api/documents/upload`, {
+  //       method: 'POST',
+  //       headers,
+  //       body: formData,
+  //     });
+
+  //     return await response.json();
+  //   } catch (error) {
+  //     return {
+  //       success: false,
+  //       error: error instanceof Error ? error.message : 'Upload failed',
+  //     };
+  //   }
+  // }
+
+async uploadDocument(
+  formData: FormData,
+  onProgress?: (percent: number) => void
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('POST', `${this.baseUrl}/api/documents/upload`);
+
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      xhr.setRequestHeader('Authorization', `Bearer ${this.token}`);
     }
 
-    try {
-      const response = await fetch(`${this.baseUrl}/api/documents/upload`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        onProgress(percent);
+      }
+    };
 
-      return await response.json();
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
-      };
-    }
-  }
+    xhr.onload = () => {
+      try {
+        const response = JSON.parse(xhr.responseText);
+        resolve(response);
+      } catch {
+        reject({ success: false, error: 'Invalid server response' });
+      }
+    };
+
+    xhr.onerror = () => {
+      reject({ success: false, error: 'Upload failed' });
+    };
+
+    xhr.send(formData);
+  });
+}
+
 
   // Search endpoints
   async search(query: string, mode: 'simple' | 'ir' | 'rag' = 'simple') {

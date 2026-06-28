@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useRouter } from 'next/navigation';
 import api from '../services/api';
 
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'ADMIN' | 'EDITOR'| 'VIEWER';
 
 interface User {
   id: string;
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('user', JSON.stringify(userData));
         
         // Redirect based on role
-        if (userData.role === 'admin') {
+        if (userData.role === 'ADMIN') {
           router.push('/admin');
         } else {
           router.push('/user');

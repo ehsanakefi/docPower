@@ -32,7 +32,7 @@ import { Label } from "../components/ui/label";
 import { toast } from "sonner";
 import api from "../services/api";
 
-type UserRole = "admin" | "editor" | "viewer";
+type UserRole = "ADMIN" | "EDITOR" | "VIEWER";
 
 type User = {
   id: string;

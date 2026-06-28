@@ -21,7 +21,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
       if (requiredRole && user.role !== requiredRole) {
         // Redirect to appropriate dashboard based on user role
-        if (user.role === 'admin') {
+        if (user.role === 'ADMIN') {
           router.push('/admin');
         } else {
           router.push('/user');

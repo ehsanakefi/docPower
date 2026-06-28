@@ -5,7 +5,7 @@ import { DocumentLibrary } from '../admin/DocumentLibrary';
 
 export default function LibraryPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute requiredRole="ADMIN">
       <DashboardLayout>
         <DocumentLibrary />
       </DashboardLayout>

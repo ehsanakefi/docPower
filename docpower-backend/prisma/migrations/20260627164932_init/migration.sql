@@ -15,7 +15,7 @@ CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "password" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT 'VIEWER',
+    "role" "UserRole" NOT NULL DEFAULT E'VIEWER',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
@@ -28,7 +28,7 @@ CREATE TABLE "documents" (
     "doc_code" TEXT NOT NULL,
     "issue_date" TIMESTAMP(3),
     "issue_date_jalali" TEXT,
-    "status" "DocumentStatus" NOT NULL DEFAULT 'ACTIVE',
+    "status" "DocumentStatus" NOT NULL DEFAULT E'ACTIVE',
     "createdById" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,

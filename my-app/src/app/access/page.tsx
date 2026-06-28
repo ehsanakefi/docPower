@@ -5,7 +5,7 @@ import { UserAccessControl } from '../admin/UserAccessControl';
 
 export default function AccessPage() {
   return (
-    <ProtectedRoute requiredRole="admin">
+    <ProtectedRoute requiredRole="ADMIN">
       <DashboardLayout>
         <UserAccessControl />
       </DashboardLayout>

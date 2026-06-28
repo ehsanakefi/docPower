@@ -79,14 +79,16 @@ export function UploadDocument() {
 
     try {
       // Simulate progress
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 10, 90));
-      }, 200);
+      // const progressInterval = setInterval(() => {
+      //   setProgress((prev) => Math.min(prev + 10, 90));
+      // }, 200);
+      const response = await api.uploadDocument(uploadFormData, (percent) => {
+    setProgress(percent);
+  });
+      // const response = await api.uploadDocument(uploadFormData);
 
-      const response = await api.uploadDocument(uploadFormData);
-
-      clearInterval(progressInterval);
-      setProgress(100);
+      // clearInterval(progressInterval);
+      // setProgress(100);
 
       if (response.success) {
         setUploadStage("complete");

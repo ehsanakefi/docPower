@@ -1,4 +1,4 @@
-type UserRole = 'admin' | 'editor' | 'viewer';
+type UserRole = 'ADMIN' | 'EDITOR' | 'VIEWER';
 type UserStatus = 'active' | 'inactive';
 
 interface User {
@@ -19,7 +19,7 @@ let mockUsers: User[] = [
     name: 'احمد محمدی',
     username: 'a.mohammadi',
     email: 'a.mohammadi@example.com',
-    role: 'admin',
+    role: 'ADMIN',
     status: 'active',
     lastLogin: '1403/11/19 - 14:30',
     createdAt: '1403/01/01'
@@ -29,7 +29,7 @@ let mockUsers: User[] = [
     name: 'سارا احمدی',
     username: 's.ahmadi',
     email: 's.ahmadi@example.com',
-    role: 'editor',
+    role: 'EDITOR',
     status: 'active',
     lastLogin: '1403/11/19 - 13:15',
     createdAt: '1403/02/10'
@@ -39,7 +39,7 @@ let mockUsers: User[] = [
     name: 'علی کریمی',
     username: 'a.karimi',
     email: 'a.karimi@example.com',
-    role: 'viewer',
+    role: 'VIEWER',
     status: 'active',
     lastLogin: '1403/11/19 - 12:45',
     createdAt: '1403/03/05'
@@ -49,7 +49,7 @@ let mockUsers: User[] = [
     name: 'مهدی رضایی',
     username: 'm.rezaei',
     email: 'm.rezaei@example.com',
-    role: 'editor',
+    role: 'EDITOR',
     status: 'active',
     lastLogin: '1403/11/18 - 16:20',
     createdAt: '1403/04/12'
@@ -59,7 +59,7 @@ let mockUsers: User[] = [
     name: 'فاطمه نوری',
     username: 'f.nouri',
     email: 'f.nouri@example.com',
-    role: 'viewer',
+    role: 'VIEWER',
     status: 'inactive',
     lastLogin: '1403/11/10 - 09:30',
     createdAt: '1403/05/20'
@@ -69,7 +69,7 @@ let mockUsers: User[] = [
     name: 'حسین صادقی',
     username: 'h.sadeghi',
     email: 'h.sadeghi@example.com',
-    role: 'admin',
+    role: 'ADMIN',
     status: 'active',
     lastLogin: '1403/11/19 - 11:00',
     createdAt: '1403/06/15'
@@ -125,7 +125,7 @@ class UserService {
   async getUserStats() {
     const totalUsers = mockUsers.length;
     const activeUsers = mockUsers.filter(u => u.status === 'active').length;
-    const adminUsers = mockUsers.filter(u => u.role === 'admin').length;
+    const adminUsers = mockUsers.filter(u => u.role === 'ADMIN').length;
     const inactiveUsers = mockUsers.filter(u => u.status === 'inactive').length;
 
     return {

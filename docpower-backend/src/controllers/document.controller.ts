@@ -7,15 +7,65 @@ import {
 import { DocumentIngestionService } from '../services/documentIngestion.service';
 import { extractTextFromDocx } from '../utils/docxExtractor';
 import multer, { FileFilterCallback } from 'multer';
-
+import fs from 'fs';
+import { readFile } from 'fs/promises';
+import path from 'path';
 const documentService = new DocumentService();
 const ingestionService = new DocumentIngestionService();
 
 // Configure multer for file uploads (memory storage)
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   limits: {
+//     fileSize: 50 * 1024 * 1024, // 50MB limit
+//   },
+//   fileFilter: (
+//     req: Express.Request,
+//     file: Express.Multer.File,
+//     cb: FileFilterCallback
+//   ) => {
+//     if (
+//       file.mimetype ===
+//         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+//       file.originalname.toLowerCase().endsWith('.docx')
+//     ) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error('Only .docx files are allowed'));
+//     }
+//   },
+// });
+
+const uploadDir = path.join(process.cwd(), 'uploads', 'documents');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb
+  ) => {
+    cb(null, uploadDir);
+  },
+
+  filename: (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb
+  ) => {
+    const safeOriginalName = file.originalname.replace(/[^\w.-]/g, '_');
+    const uniqueName = `${Date.now()}-${safeOriginalName}`;
+    cb(null, uniqueName);
+  },
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
+    fileSize: 50 * 1024 * 1024,
   },
   fileFilter: (
     req: Express.Request,
@@ -205,8 +255,9 @@ export const uploadDocument = async (req: Request, res: Response) => {
       });
     }
 
-    const rawText = await extractTextFromDocx(file.buffer);
-
+    // const rawText = await extractTextFromDocx(file.buffer);
+const fileBuffer = await readFile(file.path);
+const rawText = await extractTextFromDocx(fileBuffer);
     if (!rawText || rawText.trim().length === 0) {
       return res.status(400).json({
         success: false,
@@ -219,7 +270,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
       doc_code,
       issue_date,
       issue_date_jalali,
-      file_url: `/uploads/${file.originalname}`,
+      file_url: `/uploads/documents/${file.filename}`,
       file_size: file.size,
     });
 
