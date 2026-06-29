@@ -5,7 +5,7 @@ import { DocumentDetail } from '../DocumentDetail';
 
 export default function UserDocumentsPage() {
   return (
-    <ProtectedRoute requiredRole="user">
+    <ProtectedRoute requiredRole={['VIEWER', 'EDITOR']}>
       <UserDashboardLayout>
         <DocumentDetail />
       </UserDashboardLayout>

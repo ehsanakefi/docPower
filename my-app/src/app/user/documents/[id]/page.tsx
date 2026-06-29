@@ -11,7 +11,7 @@ interface DocumentPageProps {
 
 export default function DocumentPage({ params }: DocumentPageProps) {
   return (
-    <ProtectedRoute requiredRole="user">
+    <ProtectedRoute requiredRole={['VIEWER', 'EDITOR']}>
       <UserDashboardLayout>
         <DocumentDetail />
       </UserDashboardLayout>

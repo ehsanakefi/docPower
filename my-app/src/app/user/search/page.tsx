@@ -84,7 +84,7 @@ export default function UserSearchPage() {
   };
 
   return (
-    <ProtectedRoute requiredRole="user">
+    <ProtectedRoute requiredRole= {['VIEWER', 'EDITOR']}>
       <UserDashboardLayout>
         <div className="p-6">
           {/* Search Header */}
@@ -156,8 +156,9 @@ export default function UserSearchPage() {
               {!loading && !error && results.length > 0 ? (
                 results.map((result) => (
                   <div key={result.chunkId} className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow">
-                    <h3 className="font-bold text-lg mb-2 text-right">{result.fileName}</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 text-right">{result.snippet || result.text}</p>
+                    <h3 className="font-bold text-lg mb-2 text-right"> عنوان سند: {result.documentTitle}</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 text-right">{result.text}</p>
+                    {/* <p className="text-sm text-slate-600 dark:text-slate-400 text-right">{result.snippet || result.text}</p> */}
                     <p className="text-xs text-slate-400 mt-2 text-right">امتیاز: {result.score.toFixed(2)}</p>
                   </div>
                 ))

@@ -5,7 +5,7 @@ import { SystemLogs } from '../admin/SystemLogs';
 
 export default function LogsPage() {
   return (
-    <ProtectedRoute requiredRole="ADMIN">
+    <ProtectedRoute requiredRole= {['ADMIN']}>
       <DashboardLayout>
         <SystemLogs />
       </DashboardLayout>

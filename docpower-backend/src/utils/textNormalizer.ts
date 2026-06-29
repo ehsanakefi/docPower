@@ -32,8 +32,8 @@ export function normalizePersian(text: string): string {
 
   result = result
     .replace(DIACRITICS, '')
-    .replace(/\u200C/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/\u200C/g, ' ') // جایگزینی نیم‌فاصله با فاصله (طبق کد خودتان)
+    .replace(/[ \t\f\r]+/g, ' ') // فقط فاصله‌های افقی را یکی می‌کند (اینترها باقی می‌مانند)
     .trim();
 
   return result;
@@ -45,7 +45,7 @@ export function normalizePersian(text: string): string {
  */
 export function splitParagraphs(text: string): string[] {
   return text
-    .split(/\n\s*\n/)
+    .split(/\r?\n/)
     .map((p) => p.replace(/\s+/g, ' ').trim())
     .filter((p) => p.length > 0);
 }

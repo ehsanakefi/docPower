@@ -5,7 +5,7 @@ import { UploadDocument } from '../admin/UploadDocument';
 
 export default function UploadPage() {
   return (
-    <ProtectedRoute requiredRole="ADMIN">
+    <ProtectedRoute requiredRole={['ADMIN']}>
       <DashboardLayout>
         <UploadDocument />
       </DashboardLayout>

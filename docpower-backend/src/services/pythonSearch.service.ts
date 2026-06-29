@@ -3,12 +3,7 @@ import { Chunk } from '../models/Chunk';
 
 export interface PythonSearchRequest {
   query: string;
-  mode: 'ir' | 'rag';
-  chunks: Array<{
-    id: string;
-    text: string;
-    normalizedText: string;
-  }>;
+  mode: 'ir' | 'rag'; 
 }
 
 export interface PythonSearchResponse {
@@ -66,7 +61,6 @@ export class PythonSearchService {
           },
         }
       );
-
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {

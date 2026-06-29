@@ -9,6 +9,7 @@ export interface IRSearchResult {
   chunkId: string;
   documentId: string;
   fileName: string;
+  documentTitle: string;
   text: string;
   snippet: string;
   score: number;
@@ -34,37 +35,77 @@ export class IRSearchService {
     }
 
     // Get retrieval chunks
-    const chunks = await prisma.chunk.findMany({
-      where: {
-        type: 'RETRIEVAL',
-      },
-    });
+    // const chunks = await prisma.chunk.findMany({
+    //   where: {
+    //     type: 'RETRIEVAL',
+    //   },
+    // });
 
-    if (chunks.length === 0) {
-      return [];
-    }
+    // if (chunks.length === 0) {
+    //   return [];
+    // }
 
     // Try Python API
     const pythonResult = await this.pythonService.searchWithFallback({
       query: normalizedQuery,
       mode: 'ir',
-      chunks: chunks.map(c => ({
-        id: c.id,
-        text: c.text,
-        normalizedText: c.normalizedText,
-      })),
+      // chunks: chunks.map(c => ({
+      //   id: c.id,
+      //   text: c.text,
+      //   normalizedText: c.normalizedText,
+      // })),
+    });
+    let rankedChunkIds: Array<{ chunkId: string; score: number }>;
+let chunks;
+
+
+if (pythonResult) {
+
+    console.log(
+      'Python API result:',
+      pythonResult
+    );
+
+
+    rankedChunkIds = pythonResult.results;
+
+
+    const chunkIds = rankedChunkIds.map(
+      r => r.chunkId
+    );
+
+
+    chunks = await prisma.chunk.findMany({
+
+      where:{
+        id:{
+          in:chunkIds
+        }
+      }
+
     });
 
-    let rankedChunkIds: Array<{ chunkId: string; score: number }>;
 
-    if (pythonResult) {
-      // Use Python API results
-      rankedChunkIds = pythonResult.results;
-    } else {
-      // Fallback to local BM25-like scoring
-      rankedChunkIds = this.localIRSearch(chunks, normalizedQuery);
-    }
+}
+else {
 
+
+    chunks = await prisma.chunk.findMany({
+
+      where:{
+        type:'RETRIEVAL'
+      }
+
+    });
+
+
+    rankedChunkIds =
+      this.localIRSearch(
+        chunks,
+        normalizedQuery
+      );
+
+}
     // Map results to chunks
     const chunkMap = new Map(chunks.map(c => [c.id, c]));
 
@@ -91,7 +132,7 @@ export class IRSearchService {
         return {
           chunkId: chunk.id,
           documentId: chunk.documentId,
-          // fileName: doc?.title || chunk.metadata.fileName,
+          documentTitle: doc?.title ? doc.title : chunk.metadata? chunk.metadata.fileName || "Unknown Document": "Unknown Document",
           text: chunk.text,
           snippet,
           score,

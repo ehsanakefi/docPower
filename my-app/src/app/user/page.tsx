@@ -5,7 +5,7 @@ import { Dashboard } from './Dashboard';
 
 export default function UserPage() {
   return (
-    <ProtectedRoute requiredRole="VIEWER">
+    <ProtectedRoute requiredRole={['VIEWER', 'EDITOR']}>
       <UserDashboardLayout>
         <Dashboard />
       </UserDashboardLayout>

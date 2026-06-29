@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { addDocument, getDocuments, getDocumentById, updateDocument, deleteDocument, uploadDocument, uploadMiddleware } from '../controllers/document.controller';
+import { addDocument, getDocuments, getDocumentById, updateDocument, deleteDocument, uploadDocument } from '../controllers/document.controller';
+import { uploadMiddleware } from '@/middleware/memoryStorage';
 
 const router = Router();
 

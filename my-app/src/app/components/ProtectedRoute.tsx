@@ -5,7 +5,7 @@ import { useAuth, UserRole } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: UserRole;
+  requiredRole?: UserRole[];
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
@@ -19,7 +19,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         return;
       }
 
-      if (requiredRole && user.role !== requiredRole) {
+      if (requiredRole && !requiredRole.includes(user.role)) {
         // Redirect to appropriate dashboard based on user role
         if (user.role === 'ADMIN') {
           router.push('/admin');
@@ -43,7 +43,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return null;
   }
 
-  if (requiredRole && user.role !== requiredRole) {
+  if (requiredRole && !requiredRole.includes(user.role)) {
     return null;
   }
 

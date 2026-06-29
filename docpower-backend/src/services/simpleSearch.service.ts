@@ -8,6 +8,7 @@ export interface SimpleSearchResult {
   chunkId: string;
   documentId: string;
   // fileName: string;
+  documentTitle: string;
   text: string;
   snippet: string;
   score: number;
@@ -56,6 +57,7 @@ export class SimpleSearchService {
         chunkId: chunk.id,
         documentId: chunk.documentId,
         // fileName: doc?.title || chunk.metadata.fileName,
+         documentTitle: doc?.title ? doc.title : chunk.metadata&& chunk.metadata.fileName || "Unknown Document",
         text: chunk.text,
         snippet,
         score: this.calculateSimpleScore(chunk.normalizedText, normalizedQuery),

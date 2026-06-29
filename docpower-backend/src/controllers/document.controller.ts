@@ -10,6 +10,7 @@ import multer, { FileFilterCallback } from 'multer';
 import fs from 'fs';
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { saveFileToDisk } from '@/utils/savedisk';
 const documentService = new DocumentService();
 const ingestionService = new DocumentIngestionService();
 
@@ -42,49 +43,6 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (
-    req: Express.Request,
-    file: Express.Multer.File,
-    cb
-  ) => {
-    cb(null, uploadDir);
-  },
-
-  filename: (
-    req: Express.Request,
-    file: Express.Multer.File,
-    cb
-  ) => {
-    const safeOriginalName = file.originalname.replace(/[^\w.-]/g, '_');
-    const uniqueName = `${Date.now()}-${safeOriginalName}`;
-    cb(null, uniqueName);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024,
-  },
-  fileFilter: (
-    req: Express.Request,
-    file: Express.Multer.File,
-    cb: FileFilterCallback
-  ) => {
-    if (
-      file.mimetype ===
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      file.originalname.toLowerCase().endsWith('.docx')
-    ) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only .docx files are allowed'));
-    }
-  },
-});
-
-export const uploadMiddleware = upload.single('file');
 
 export const addDocument = async (req: Request, res: Response) => {
   try {
@@ -230,10 +188,13 @@ export const updateDocument = async (req: Request, res: Response) => {
  *  - issue_date_jalali: Jalali date, optional
  */
 export const uploadDocument = async (req: Request, res: Response) => {
+  let savedFile: { filepath: string; url: string } | null = null;
+
   try {
     const file = req.file;
     const { title, doc_code, issue_date, issue_date_jalali } = req.body;
 
+    // ---------- validate file ----------
     if (!file) {
       return res.status(400).json({
         success: false,
@@ -241,6 +202,7 @@ export const uploadDocument = async (req: Request, res: Response) => {
       });
     }
 
+    // ---------- validate metadata ----------
     if (!title || !doc_code) {
       return res.status(400).json({
         success: false,
@@ -255,9 +217,17 @@ export const uploadDocument = async (req: Request, res: Response) => {
       });
     }
 
-    // const rawText = await extractTextFromDocx(file.buffer);
-const fileBuffer = await readFile(file.path);
-const rawText = await extractTextFromDocx(fileBuffer);
+    // ---------- validate issue_date if exists ----------
+    if (issue_date && Number.isNaN(Date.parse(issue_date))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid issue_date',
+      });
+    }
+
+    // ---------- extract text from DOCX ----------
+    const rawText = await extractTextFromDocx(file.buffer);
+
     if (!rawText || rawText.trim().length === 0) {
       return res.status(400).json({
         success: false,
@@ -265,31 +235,30 @@ const rawText = await extractTextFromDocx(fileBuffer);
       });
     }
 
+    // ---------- save file to disk ----------
+    savedFile = await saveFileToDisk(file);
+
+    // ---------- create document record ----------
     const document = await documentService.addDocument({
       title,
       doc_code,
       issue_date,
       issue_date_jalali,
-      file_url: `/uploads/documents/${file.filename}`,
+      file_url: savedFile.url,
       file_size: file.size,
     });
 
     if (!document) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create document record',
-      });
+      throw new Error('Failed to create document record');
     }
 
     const latestVersion = document.versions?.[0];
 
     if (!latestVersion) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create document version',
-      });
+      throw new Error('Failed to create document version');
     }
 
+    // ---------- ingestion pipeline ----------
     const ingestionResult = await ingestionService.ingestDocument({
       documentId: document.id,
       versionId: latestVersion.id,
@@ -307,6 +276,15 @@ const rawText = await extractTextFromDocx(fileBuffer);
     });
   } catch (error) {
     console.error('Upload document error:', error);
+
+    // ---------- cleanup file if something failed ----------
+    if (savedFile?.filepath) {
+      try {
+        await fs.promises.unlink(savedFile.filepath);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup uploaded file:', cleanupError);
+      }
+    }
 
     return res.status(500).json({
       success: false,

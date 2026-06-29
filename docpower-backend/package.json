@@ -4,16 +4,15 @@
   "description": "A technical document portal with title-based search functionality.",
   "main": "src/app.ts",
   "scripts": {
-    "start": "ts-node src/app.ts",
-    "dev": "ts-node src/app.ts",
+       "dev": "tsx watch src/app.ts",
+  "start": "ts-node -r tsconfig-paths/register src/app.ts",
     "build": "tsc",
     "migrate": "prisma migrate dev",
     "seed": "ts-node prisma/seed.ts"
   },
   "prisma": {
-  "seed": "ts-node prisma/seed.ts"
-}
-  ,
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "axios": "^1.6.0",
@@ -41,6 +40,7 @@
     "jest": "^27.0.6",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^1.1.8",
+    "tsconfig-paths": "^4.2.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   },
