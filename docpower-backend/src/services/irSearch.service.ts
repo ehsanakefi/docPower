@@ -34,26 +34,11 @@ export class IRSearchService {
       return [];
     }
 
-    // Get retrieval chunks
-    // const chunks = await prisma.chunk.findMany({
-    //   where: {
-    //     type: 'RETRIEVAL',
-    //   },
-    // });
-
-    // if (chunks.length === 0) {
-    //   return [];
-    // }
-
     // Try Python API
     const pythonResult = await this.pythonService.searchWithFallback({
       query: normalizedQuery,
       mode: 'ir',
-      // chunks: chunks.map(c => ({
-      //   id: c.id,
-      //   text: c.text,
-      //   normalizedText: c.normalizedText,
-      // })),
+
     });
     let rankedChunkIds: Array<{ chunkId: string; score: number }>;
 let chunks;
