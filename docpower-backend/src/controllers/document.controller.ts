@@ -11,8 +11,14 @@ import fs from 'fs';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { saveFileToDisk } from '@/utils/savedisk';
+import { PythonEmbeddingProvider } from '@/services/pythonEmbeddingProvider';
+
+const embeddingProvider = new PythonEmbeddingProvider(
+  process.env.PYTHON_API_URL || "http://localhost:8000",
+  64
+);
 const documentService = new DocumentService();
-const ingestionService = new DocumentIngestionService();
+const ingestionService = new DocumentIngestionService(  embeddingProvider);
 
 // Configure multer for file uploads (memory storage)
 // const upload = multer({

@@ -1,10 +1,11 @@
+import { randomUUID } from 'crypto';
+import { Prisma, ChunkType } from '@prisma/client';
 import { normalizePersian } from './textNormalizer';
-import { ChunkType } from "@prisma/client";
-// export type ChunkType = 'paragraph' | 'retrieval' | 'rag';
 
 export interface ChunkData {
+  id: string;
   documentId: string;
-  versionId :string;
+  versionId: string;
   chunkIndex: number;
   type: ChunkType;
   text: string;
@@ -12,10 +13,7 @@ export interface ChunkData {
   paragraphStart: number;
   paragraphEnd: number;
   charLength: number;
-  metadata: {
-    fileName: string;
-    uploadDate: string;
-  };
+  metadata: Prisma.InputJsonValue;
 }
 
 interface ChunkConfig {
@@ -36,9 +34,6 @@ const RAG_CONFIG: ChunkConfig = {
   overlap: 1,
 };
 
-/**
- * Build paragraph chunks (1:1 mapping to paragraphs).
- */
 function buildParagraphChunks(
   paragraphs: string[],
   documentId: string,
@@ -47,6 +42,7 @@ function buildParagraphChunks(
   versionId: string
 ): ChunkData[] {
   return paragraphs.map((text, index) => ({
+    id: randomUUID(),
     documentId,
     versionId,
     chunkIndex: index,
@@ -60,9 +56,6 @@ function buildParagraphChunks(
   }));
 }
 
-/**
- * Generic windowed chunk builder with configurable size and overlap.
- */
 function buildWindowedChunks(
   paragraphs: string[],
   documentId: string,
@@ -94,6 +87,7 @@ function buildWindowedChunks(
     }
 
     chunks.push({
+      id: randomUUID(),
       documentId,
       versionId,
       chunkIndex,
@@ -113,10 +107,6 @@ function buildWindowedChunks(
   return chunks;
 }
 
-/**
- * Run the full chunking pipeline on an array of paragraphs.
- * Returns all three chunk types in a single flat array.
- */
 export function createAllChunks(
   paragraphs: string[],
   documentId: string,
@@ -126,12 +116,32 @@ export function createAllChunks(
 ): ChunkData[] {
   if (paragraphs.length === 0) return [];
 
-  const paragraphChunks = buildParagraphChunks(paragraphs, documentId, fileName, uploadDate, versionId);
-  const retrievalChunks = buildWindowedChunks(
-    paragraphs, documentId, fileName, uploadDate, 'RETRIEVAL', RETRIEVAL_CONFIG, versionId  
+  const paragraphChunks = buildParagraphChunks(
+    paragraphs,
+    documentId,
+    fileName,
+    uploadDate,
+    versionId
   );
+
+  const retrievalChunks = buildWindowedChunks(
+    paragraphs,
+    documentId,
+    fileName,
+    uploadDate,
+    'RETRIEVAL',
+    RETRIEVAL_CONFIG,
+    versionId
+  );
+
   const ragChunks = buildWindowedChunks(
-    paragraphs, documentId, fileName, uploadDate, 'RAG', RAG_CONFIG, versionId
+    paragraphs,
+    documentId,
+    fileName,
+    uploadDate,
+    'RAG',
+    RAG_CONFIG,
+    versionId
   );
 
   return [...paragraphChunks, ...retrievalChunks, ...ragChunks];
